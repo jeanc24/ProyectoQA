@@ -1,0 +1,994 @@
+================================================================================
+  PROYECTO FINAL - ASEGURAMIENTO DE CALIDAD DE SOFTWARE (PUCMM)
+  Sistema de Gestión de Inventarios Empresarial
+================================================================================
+
+Equipo       : Jean + Emilio (2 integrantes)
+Stack        : Spring Boot + React + PostgreSQL + Docker Compose
+Inicio       : 8 de junio 2025
+Entrega      : Principios de agosto 2025 (~4 de agosto)
+Carga horaria: 20-25 horas/semana por persona (320-400 h totales del equipo)
+               Equipo combinado: 40-50 horas/semana
+Enfoque      : Una semana a la vez. ENTENDER cada capa antes de avanzar.
+Uso de IA    : Solo para dudas puntuales (errores, conceptos). NO generar
+               módulos enteros. El docente evalúa commits, PRs y comprensión.
+
+NOTA SOBRE LA CARGA (20-25 h/semana):
+  Con este ritmo el proyecto es VIABLE sin apuros extremos, siempre que
+  respeten la regla de una semana a la vez. Las horas extra NO sirven para
+  adelantar semanas futuras; sirven para:
+    - Pair sessions (2-3 h/semana) para entender juntos lo difícil
+    - Pulir y probar bien cada entregable antes de cerrar la semana
+    - Documentar mientras avanzan (no dejar todo para semana 8)
+    - Buffer ante bloqueos (Keycloak, Docker, observabilidad)
+  Distribución sugerida POR PERSONA cada semana:
+    ~14-18 h  tareas asignadas (código, config, tests)
+    ~ 2-3 h   review de PRs del compañero + issues
+    ~ 2-3 h   lectura/documentación oficial del tema de la semana
+    ~ 2-3 h   sync + pair session + verificación de entregables
+
+================================================================================
+  REGLAS DE TRABAJO DEL EQUIPO
+================================================================================
+
+1. CONVENCIONES
+   - Conventional Commits: feat:, fix:, test:, docs:, chore:
+   - Ramas: main (protegida) <- develop <- feature/nombre-tarea
+   - Cada tarea = 1 issue en GitHub + 1 Pull Request
+   - Ningún PR se mergea sin review del compañero
+   - Meta de commits: 45-55% cada uno (verificar con: git shortlog -sn)
+
+2. COMUNICACIÓN
+   - Daily async (15 min): mensaje "ayer / hoy / bloqueo" por WhatsApp/Discord
+   - Sync semanal (1 h): revisar checklist, repartir semana siguiente
+   - Sync mid-week opcional (30 min, miércoles): desbloquear si algo va lento
+   - Pair session (2 h/semana mínimo): Keycloak, Docker, observabilidad, CI/CD
+   - Si algo lleva >2 días bloqueado: pair session entre Jean y Emilio ese mismo día
+
+3. REGLA DE ORO
+   - NO avanzar a la semana N+1 hasta que los entregables de la semana N
+     estén hechos, probados y entendidos por AMBOS.
+
+4. REPARTO EQUITATIVO
+   - Jean  = Persona A (backend, infra, Keycloak, GHA, requisitos backend)
+   - Emilio = Persona B (frontend, staging, Jenkins, guía pruebas, E2E)
+   - Cada semana alternan quién abre el PR primero
+   - Ambos revisan el PR del otro siempre
+
+================================================================================
+  ESTRUCTURA FINAL DEL REPOSITORIO (referencia, NO crear todo el día 1)
+================================================================================
+
+ProyectoQA/
+├── backend/                 # Spring Boot API
+├── frontend/                # React (Vite)
+├── infra/
+│   ├── docker-compose.yml
+│   ├── docker-compose.staging.yml
+│   ├── keycloak/realm-export.json
+│   ├── grafana/dashboards/
+│   ├── prometheus/
+│   ├── alloy/
+│   └── jenkins/Jenkinsfile
+├── tests/
+│   ├── api/
+│   ├── performance/         # k6
+│   └── security/            # ZAP
+├── docs/
+│   ├── requirements.md
+│   ├── architecture.md
+│   ├── testing-guide.md
+│   └── exploratory/
+├── .github/workflows/
+├── .env.example
+└── README.md
+
+================================================================================
+  CRONOGRAMA GENERAL (8 SEMANAS)
+================================================================================
+
+  Semana 1 (8-14 jun)   Fundación: repo, Docker base, skeleton backend+frontend
+  Semana 2 (15-21 jun)  CRUD productos, OpenAPI, tests unitarios
+  Semana 3 (22-28 jun)  Keycloak, OAuth2, permisos granulares
+  Semana 4 (29 jun-5 jul) Stock, Envers, pantallas React core
+  Semana 5 (6-12 jul)   Dashboard + observabilidad (OTel, Grafana stack)
+  Semana 6 (13-19 jul)  Suite completa de testing + evidencias
+  Semana 7 (20-26 jul)  CI/CD (GHA + Jenkins) + staging + SonarCloud
+  Semana 8 (27 jul-2 ago) Documentación final, buffer, ensayo presentación
+  Buffer   (3-4 ago)    Solo fixes críticos. Congelar features.
+
+================================================================================
+  CHECKLIST DE CUMPLIMIENTO vs PDF (marcar al final de cada semana)
+================================================================================
+
+FUNCIONALIDAD (15%)
+  [ ] CRUD productos con paginación, búsqueda, filtros, ordenamiento
+  [ ] Stock entradas/salidas + alertas stock mínimo
+  [ ] Historial movimientos + auditoría Envers
+  [ ] API REST + OpenAPI/Swagger
+  [ ] Dashboard con métricas operacionales
+
+TESTING (20%)
+  [ ] Unit tests (JUnit + Mockito)
+  [ ] Integration tests (Testcontainers)
+  [ ] API / Contract tests
+  [ ] E2E (Playwright)
+  [ ] Security testing (ZAP, JWT, permisos, CORS, Dependency Check)
+  [ ] Performance (k6 load + stress)
+  [ ] Data testing (migraciones, constraints)
+  [ ] Manual exploratory (charters + bugs)
+
+SEGURIDAD (10%)
+  [ ] Keycloak + OAuth2 + JWT + refresh tokens
+  [ ] Permisos granulares (no solo roles simples)
+
+OBSERVABILIDAD (15%)
+  [ ] OpenTelemetry + Prometheus + Tempo + Loki + Alloy + Grafana + Alertmanager
+
+CI/CD (15%)
+  [ ] GitHub Actions + Jenkins + deploy staging + tests post-deploy
+
+CALIDAD CÓDIGO (10%)
+  [ ] SonarCloud con quality gate
+
+DOCUMENTACIÓN (10%) + PRESENTACIÓN (5%)
+  [ ] Requisitos + arquitectura + guía de pruebas + demo funcional
+
+================================================================================
+████████████████████████████████████████████████████████████████████████████████
+  SEMANA 1 — FUNDACIÓN (8-14 de junio)
+  Objetivo: Repo vivo + docker compose levanta 4 servicios básicos
+  Presupuesto: 20-22 h por persona | 40-44 h equipo
+  (Semana de aprendizaje; no apresurarse aunque sobre tiempo)
+████████████████████████████████████████████████████████████████████████████████
+
+ENTREGABLE DE LA SEMANA:
+  -> docker compose up levanta: postgres, keycloak, backend, frontend
+  -> Backend responde en /actuator/health
+  -> Frontend muestra pantalla placeholder con layout y routing
+  -> README con instrucciones de instalación
+  -> Primer PR mergeado en develop
+
+------------------------------------------------------------------------
+DÍA 1-2 (ambos, pair session recomendada)
+------------------------------------------------------------------------
+
+TAREA 1.1 [JEAN] — Crear repositorio GitHub
+  - Crear repo público "ProyectoQA" (o nombre acordado)
+  - Invitar al docente como colaborador
+  - Invitar a Emilio
+  - Crear ramas: main, develop
+  - Activar branch protection en main (PR obligatorio, 1 review)
+  - Crear labels: enhancement, bug, documentation, testing, infra
+
+TAREA 1.2 [EMILIO] — Crear issues iniciales (mínimo 10 esta semana)
+  - Issue por cada tarea de la semana 1
+  - Plantilla: título, descripción, asignado, milestone "Semana 1"
+  - NO crear los 25+ issues del proyecto completo aún; ir semana a semana
+
+TAREA 1.3 [JEAN] — Generar proyecto Spring Boot
+  - Ir a https://start.spring.io
+  - Config: Maven, Java 21, Spring Boot 3.5+, group com.pucmm
+  - Dependencias: Web, JPA, PostgreSQL, Validation, Flyway, Security,
+    OAuth2 Resource Server, Actuator
+  - Descargar, descomprimir en carpeta backend/
+  - Verificar: cd backend && ./mvnw spring-boot:run (fallará sin DB, OK)
+  - Commit: chore: init spring boot backend skeleton
+
+TAREA 1.4 [EMILIO] — Generar proyecto React
+  - npm create vite@latest frontend -- --template react-ts
+  - cd frontend && npm install
+  - Verificar: npm run dev (debe abrir en localhost:5173)
+  - Commit: chore: init react frontend with vite
+
+------------------------------------------------------------------------
+DÍA 3-4
+------------------------------------------------------------------------
+
+TAREA 1.5 [JEAN] — Docker Compose base (postgres + keycloak)
+  - Crear infra/docker-compose.yml
+  - Servicio postgres:16-alpine (puerto 5432, user/pass/db: inventory)
+  - Servicio keycloak:26 (puerto 8081:8080, modo dev)
+  - Healthcheck en postgres
+  - Crear .env.example con variables (sin secretos reales)
+  - Commit: feat(infra): add postgres and keycloak to docker compose
+
+TAREA 1.6 [EMILIO] — Frontend skeleton con routing
+  - Instalar: react-router-dom
+  - Crear estructura:
+      src/pages/LoginPage.tsx      (placeholder "Iniciar sesión")
+      src/pages/DashboardPage.tsx  (placeholder "Dashboard")
+      src/components/Layout.tsx    (sidebar + contenido)
+  - Configurar rutas en App.tsx: /, /login, /products (placeholder)
+  - Estilos básicos (CSS simple, sin librería aún)
+  - Commit: feat(frontend): add routing and layout skeleton
+
+TAREA 1.7 [JEAN] — Backend: conexión a DB + Flyway migración inicial
+  - Crear application.yml con variables de entorno (DB_URL, DB_USER, etc.)
+  - Crear perfil local (spring.profiles.active=local)
+  - Migración V1__init_schema.sql: tabla products básica (id, name, sku)
+  - Entidad Product + ProductRepository
+  - Endpoint GET /api/v1/health o usar actuator/health
+  - Probar con postgres en Docker
+  - Commit: feat(backend): add database connection and initial migration
+
+------------------------------------------------------------------------
+DÍA 5-6
+------------------------------------------------------------------------
+
+TAREA 1.8 [JEAN] — Dockerfile backend + servicio en compose
+  - Crear backend/Dockerfile (multi-stage: build con mvnw, run con JRE 21)
+  - Agregar servicio backend al docker-compose.yml (puerto 8080)
+  - Depende de postgres healthy
+  - Commit: feat(infra): add backend dockerfile and compose service
+
+TAREA 1.9 [EMILIO] — Dockerfile frontend + servicio en compose
+  - Crear frontend/Dockerfile (build con node, serve con nginx)
+  - Crear frontend/nginx.conf
+  - Agregar servicio frontend al compose (puerto 3000:80)
+  - Commit: feat(infra): add frontend dockerfile and compose service
+
+TAREA 1.10 [EMILIO] — README inicial
+  - Descripción del proyecto
+  - Prerrequisitos: Docker, Java 21, Node 22
+  - Comandos: docker compose up, desarrollo local
+  - Tabla de servicios y puertos
+  - Commit: docs: add initial README
+
+------------------------------------------------------------------------
+DÍA 7 (domingo 14 jun — cierre de semana)
+------------------------------------------------------------------------
+
+TAREA 1.11 [JEAN] — GitHub Actions mínimo
+  - .github/workflows/ci.yml
+  - Jobs: backend compile, frontend build
+  - Sin tests aún, solo verificar que compila
+  - Commit: ci: add minimal build pipeline
+
+TAREA 1.12 [AMBOS] — Verificación final semana 1
+  - docker compose up --build (los 4 servicios deben levantar)
+  - curl http://localhost:8080/actuator/health -> 200
+  - Abrir http://localhost:3000 -> ver layout
+  - Jean abre PR: develop -> main (o feature/week1 -> develop)
+  - Emilio hace review
+  - Sync: ¿entendemos qué hace cada pieza? Anotar dudas.
+
+TAREA 1.13 [EMILIO] — Borrador docs/requirements.md (v0.1)
+  - Solo requisitos de la semana 1-2 (productos básicos)
+  - Se irá ampliando cada semana
+  - Commit: docs: add requirements draft v0.1
+
+APRENDER ESTA SEMANA (auto-evaluación):
+  [ ] ¿Qué es Docker Compose y para qué sirve cada servicio?
+  [ ] ¿Cómo Spring Boot se conecta a PostgreSQL?
+  [ ] ¿Qué hace Flyway y por qué no usamos ddl-auto=create?
+  [ ] ¿Cómo funciona el routing en React?
+  [ ] ¿Qué es un PR y por qué usamos develop?
+
+================================================================================
+████████████████████████████████████████████████████████████████████████████████
+  SEMANA 2 — CORE BACKEND (15-21 de junio)
+  Objetivo: CRUD productos completo + Swagger + tests unitarios
+  Presupuesto: 22-24 h por persona | 44-48 h equipo
+████████████████████████████████████████████████████████████████████████████████
+
+ENTREGABLE:
+  -> Swagger UI funcional con CRUD completo de productos
+  -> Paginación, búsqueda, filtros, ordenamiento
+  -> Tests unitarios de ProductService con >60% coverage en servicios
+  -> Perfil local sin auth (security abierta para desarrollo)
+
+------------------------------------------------------------------------
+TAREAS JEAN (backend)
+------------------------------------------------------------------------
+
+TAREA 2.1 [JEAN] — Modelo de datos completo
+  - Migración V2: categories, products (campos completos del PDF), índices
+  - Migración V3: seed data (3 categorías, 5 productos demo)
+  - Entidades: Category, Product con todos los campos del PDF
+  - Enums si aplica (MovementType se deja para semana 4)
+
+TAREA 2.2 [JEAN] — ProductService con lógica de negocio
+  - CRUD: create, update, delete, findById, findAll
+  - Validación SKU único
+  - Paginación con Pageable
+  - Búsqueda por nombre/SKU (Specification o query)
+  - Filtros: categoryId, active
+  - Ordenamiento configurable
+
+TAREA 2.3 [JEAN] — ProductController REST
+  - GET    /api/v1/products         (lista paginada)
+  - GET    /api/v1/products/{id}
+  - POST   /api/v1/products
+  - PUT    /api/v1/products/{id}
+  - DELETE /api/v1/products/{id}
+  - DTOs: ProductRequest, ProductResponse, PageResponse
+  - Validación con @Valid
+  - GlobalExceptionHandler (404, 400)
+
+TAREA 2.4 [JEAN] — OpenAPI / Swagger
+  - Agregar springdoc-openapi dependency
+  - Configurar en application.yml
+  - Verificar: http://localhost:8080/swagger-ui.html
+  - Documentar cada endpoint con @Operation
+
+TAREA 2.5 [JEAN] — Tests unitarios ProductService
+  - ProductServiceTest con JUnit 5 + Mockito
+  - Casos: crear OK, SKU duplicado, findById, findById not found,
+    búsqueda con filtros
+  - Meta: >60% coverage en capa service
+  - ./mvnw test debe pasar
+
+------------------------------------------------------------------------
+TAREAS EMILIO (frontend + docs)
+------------------------------------------------------------------------
+
+TAREA 2.6 [EMILIO] — Pantalla lista de productos (solo lectura primero)
+  - src/api/client.ts (axios, sin auth aún)
+  - src/api/inventory.ts (fetchProducts)
+  - src/pages/ProductsPage.tsx: tabla con productos del API
+  - Paginación básica (botones prev/next)
+  - Campo de búsqueda
+
+TAREA 2.7 [EMILIO] — Formulario crear/editar producto
+  - Modal o formulario en ProductsPage
+  - Campos: nombre, SKU, descripción, categoría, precio, cantidad,
+    stock mínimo, activo
+  - Llamadas createProduct / updateProduct
+  - Validación básica en frontend
+
+TAREA 2.8 [EMILIO] — Actualizar docs/requirements.md (v0.2)
+  - Documentar RF-01 completo (gestión productos)
+  - Agregar RNF de API REST
+
+TAREA 2.9 [EMILIO] — Actualizar CI
+  - Agregar step: ./mvnw test (unit tests)
+  - Agregar step: npm run build
+
+------------------------------------------------------------------------
+CIERRE SEMANA 2
+------------------------------------------------------------------------
+
+TAREA 2.10 [AMBOS]
+  - Probar CRUD completo: Swagger + UI
+  - Emilio abre PR (alternar con semana 1)
+  - Jean hace review
+  - Sync: repasar flujo Controller -> Service -> Repository -> DB
+
+APRENDER ESTA SEMANA:
+  [ ] ¿Qué es un DTO y por qué no devolvemos la entidad JPA directo?
+  [ ] ¿Cómo funciona Pageable en Spring?
+  [ ] ¿Qué es Mockito y qué mockeamos en unit tests?
+  [ ] ¿Cómo se documenta una API con OpenAPI?
+
+================================================================================
+████████████████████████████████████████████████████████████████████████████████
+  SEMANA 3 — SEGURIDAD KEYCLOAK (22-28 de junio) *** CRÍTICA ***
+  Objetivo: Auth completa con permisos granulares
+  Presupuesto: 24-25 h por persona | 48-50 h equipo
+  (Semana más densa; usar pair sessions obligatorias 3 h)
+████████████████████████████████████████████████████████████████████████████████
+
+ENTREGABLE:
+  -> Usuario sin product:manage recibe 403 al crear producto
+  -> Login/logout funcional en React con Keycloak
+  -> Refresh token automático
+  -> Realm export versionado en Git
+  -> Mínimo 5 tests de integración de auth
+
+PERMISOS OBLIGATORIOS (matriz del PDF):
+  product:view    | Ver productos
+  product:manage  | Crear, editar, eliminar productos
+  stock:view      | Ver existencia e historial
+  stock:manage    | Registrar entradas, salidas, ajustes
+  report:view     | Ver reportes y dashboard
+  user:manage     | Gestionar usuarios, roles y permisos
+  audit:view      | Consultar auditoría
+
+------------------------------------------------------------------------
+TAREAS JEAN (Keycloak + backend security)
+------------------------------------------------------------------------
+
+TAREA 3.1 [JEAN] — Configurar Keycloak realm
+  - Crear infra/keycloak/realm-export.json
+  - Realm: inventory
+  - Client inventory-api (bearer-only)
+  - Client inventory-frontend (public, PKCE, redirect URIs)
+  - Client roles en inventory-api: los 7 permisos de arriba
+  - Realm roles: inventory-admin, inventory-manager, inventory-viewer,
+    stock-operator, auditor
+  - Usuarios demo:
+      admin/admin     -> todos los permisos
+      manager/manager -> product + stock + report
+      viewer/viewer   -> solo view
+      stockop/stockop -> stock:view + stock:manage + product:view
+      auditor/auditor -> audit:view + product:view + stock:view
+  - Importar con: keycloak start-dev --import-realm
+  - PROBAR manualmente en consola Keycloak que los tokens incluyen roles
+
+TAREA 3.2 [JEAN] — Spring Security OAuth2 Resource Server
+  - Perfil docker: activar OAuth2 JWT
+  - KeycloakJwtAuthenticationConverter: extraer permisos del claim
+    resource_access.inventory-api.roles -> authority PERM_product:view
+  - PermissionChecker bean con @Component("authz")
+  - @PreAuthorize("@authz.hasPermission('product:view')") en cada endpoint
+  - NO validar solo por rol; validar por permiso
+  - CORS configurado para frontend
+  - Perfil local: mantener security abierta para dev
+
+TAREA 3.3 [JEAN] — Tests de seguridad
+  - SecurityPermissionTest:
+      * Usuario con solo product:view -> POST /products = 403
+      * Usuario con product:manage -> POST /products = 201
+  - Usar @SpringBootTest + jwt() post processor
+  - Mínimo 5 escenarios de auth
+
+------------------------------------------------------------------------
+TAREAS EMILIO (frontend auth)
+------------------------------------------------------------------------
+
+TAREA 3.4 [EMILIO] — Integrar Keycloak en React
+  - npm install keycloak-js
+  - src/auth/keycloak.ts (init, refresh, hasPermission)
+  - src/auth/AuthContext.tsx (provider con estado auth)
+  - Login con redirect a Keycloak
+  - Logout
+  - Refresh token cada 30s (updateToken)
+
+TAREA 3.5 [EMILIO] — Protección de rutas por permiso
+  - ProtectedRoute component
+  - Dashboard requiere report:view
+  - Productos requiere product:view
+  - Botones crear/editar/eliminar solo si product:manage
+  - Página /unauthorized
+
+TAREA 3.6 [EMILIO] — Interceptor axios con JWT
+  - Agregar Bearer token en cada request
+  - Manejar 401 (redirect login) y 403 (unauthorized)
+
+TAREA 3.7 [EMILIO] — Probar flujos por rol
+  - Login como viewer: ve productos, NO ve botón crear
+  - Login como manager: puede crear productos
+  - Login como admin: acceso total
+  - Documentar resultados en docs/testing-guide.md (sección auth)
+
+------------------------------------------------------------------------
+CIERRE SEMANA 3
+------------------------------------------------------------------------
+
+TAREA 3.8 [AMBOS]
+  - Demo interna: mostrar 403 con viewer intentando crear
+  - Exportar realm JSON actualizado si hubo cambios manuales
+  - Jean abre PR
+  - Sync: ¿entendemos el flujo OAuth2? Dibujar en papel:
+    Browser -> Keycloak -> JWT -> API -> @PreAuthorize
+
+APRENDER ESTA SEMANA:
+  [ ] ¿Qué es OAuth2 Authorization Code + PKCE?
+  [ ] ¿Qué lleva un JWT? ¿Dónde están los permisos?
+  [ ] ¿Diferencia entre rol y permiso?
+  [ ] ¿Qué hace @PreAuthorize?
+  [ ] ¿Por qué NO hardcodear credenciales?
+
+================================================================================
+████████████████████████████████████████████████████████████████████████████████
+  SEMANA 4 — STOCK, AUDITORÍA Y FRONTEND CORE (29 jun - 5 jul)
+  Objetivo: Flujo negocio completo visible en UI
+  Presupuesto: 22-24 h por persona | 44-48 h equipo
+████████████████████████████████████████████████████████████████████████████████
+
+ENTREGABLE:
+  -> Crear producto -> registrar entrada stock -> ver historial
+  -> Alertas stock mínimo (badge en UI + query en backend)
+  -> Auditoría Envers consultable
+  -> Integration tests con Testcontainers
+
+------------------------------------------------------------------------
+TAREAS JEAN (backend stock + envers)
+------------------------------------------------------------------------
+
+TAREA 4.1 [JEAN] — Stock backend
+  - Migración: tabla stock_movements
+  - Entidad StockMovement, enum MovementType (IN, OUT, ADJUSTMENT)
+  - StockService: registrar movimiento, validar stock insuficiente
+  - StockController:
+      GET  /api/v1/stock/movements
+      GET  /api/v1/stock/products/{id}/movements
+      POST /api/v1/stock/products/{id}/movements
+  - Permisos: stock:view, stock:manage
+  - Registrar usuario que ejecutó el movimiento (del JWT)
+
+TAREA 4.2 [JEAN] — Hibernate Envers (auditoría)
+  - @Audited en entidad Product
+  - Tablas de auditoría en migración (revinfo, products_audit)
+  - AuditService: consultar historial de revisiones
+  - AuditController: GET /api/v1/audit/products/{id}
+  - Permiso: audit:view
+
+TAREA 4.3 [JEAN] — Alertas stock mínimo
+  - Query: productos donde quantity <= minStock
+  - Campo belowMinStock en ProductResponse
+  - Endpoint o flag en dashboard (preparar para semana 5)
+
+TAREA 4.4 [JEAN] — Integration tests (Testcontainers)
+  - AbstractIntegrationTest con PostgreSQLContainer
+  - ProductIntegrationTest: CRUD + stock flow completo
+  - DataIntegrityTest: seed data, SKU unique, migraciones
+  - Requiere Docker corriendo para ejecutar
+
+------------------------------------------------------------------------
+TAREAS EMILIO (frontend stock + alertas)
+------------------------------------------------------------------------
+
+TAREA 4.5 [EMILIO] — Pantalla Stock
+  - src/pages/StockPage.tsx
+  - Formulario: seleccionar producto, tipo movimiento, cantidad, notas
+  - Tabla historial de movimientos
+  - Solo visible con stock:view; formulario con stock:manage
+
+TAREA 4.6 [EMILIO] — Mejorar ProductsPage
+  - Badge "Bajo mínimo" en productos críticos
+  - Botón "Ver auditoría" (si audit:view) -> tabla de revisiones
+  - Filtro por categoría y estado activo
+
+TAREA 4.7 [EMILIO] — Pulir UX
+  - Mensajes de error del API mostrados al usuario
+  - Loading states
+  - Confirmación antes de eliminar
+  - Responsive básico (sidebar colapsa en móvil)
+
+------------------------------------------------------------------------
+CIERRE SEMANA 4
+------------------------------------------------------------------------
+
+TAREA 4.8 [AMBOS]
+  - Flujo completo end-to-end manual:
+    1. Login como manager
+    2. Crear producto
+    3. Registrar entrada de stock
+    4. Registrar salida
+    5. Ver historial
+    6. Ver auditoría del producto
+  - Emilio abre PR
+  - Actualizar docs/requirements.md con RF-02 y RF-03
+
+APRENDER ESTA SEMANA:
+  [ ] ¿Cómo funciona un movimiento de stock (before/after/delta)?
+  [ ] ¿Qué es Hibernate Envers y qué audita?
+  [ ] ¿Qué es Testcontainers y por qué usamos DB real en tests?
+  [ ] ¿Cómo se propagan errores del backend al frontend?
+
+================================================================================
+████████████████████████████████████████████████████████████████████████████████
+  SEMANA 5 — DASHBOARD + OBSERVABILIDAD (6-12 de julio)
+  Objetivo: Telemetría end-to-end funcionando en Grafana
+  Presupuesto: 24-25 h por persona | 48-50 h equipo
+  (Mucha config; reservar 4 h para levantar y depurar el stack completo)
+████████████████████████████████████████████████████████████████████████████████
+
+ENTREGABLE:
+  -> Dashboard React con métricas operacionales
+  -> Request en API visible como trace en Grafana Tempo
+  -> 4 dashboards Grafana: Infraestructura, Aplicación, Negocio, Seguridad
+  -> Alertas configuradas en Alertmanager
+
+------------------------------------------------------------------------
+TAREAS JEAN (instrumentación backend)
+------------------------------------------------------------------------
+
+TAREA 5.1 [JEAN] — OpenTelemetry en Spring Boot
+  - Dependencias: micrometer-tracing-bridge-otel, opentelemetry-exporter-otlp
+  - Configurar en application.yml: endpoint OTLP, sampling 100% en dev
+  - Logs con traceId, spanId, correlationId (MDC)
+  - CorrelationIdFilter: header X-Correlation-Id
+
+TAREA 5.2 [JEAN] — ReportService + Dashboard API
+  - GET /api/v1/reports/dashboard
+  - Retornar: totalProducts, activeProducts, criticalStockCount,
+    totalMovements, criticalProducts, topProducts, recentMovements
+  - Permiso: report:view
+
+TAREA 5.3 [JEAN] — Docker Compose: stack observabilidad
+  - Agregar servicios: alloy, prometheus, tempo, loki, grafana, alertmanager
+  - Configurar alloy/config.alloy (receiver OTLP -> tempo + loki)
+  - Configurar prometheus/prometheus.yml (scrape backend /actuator/prometheus)
+  - Configurar tempo/tempo.yml, loki/loki.yml
+  - Configurar alertmanager/alertmanager.yml
+  - Alertas: CPU alto, error rate, latencia, servicio caído, fallo auth
+
+------------------------------------------------------------------------
+TAREAS EMILIO (dashboards Grafana + UI)
+------------------------------------------------------------------------
+
+TAREA 5.4 [EMILIO] — Dashboard React
+  - src/pages/DashboardPage.tsx con datos reales del API
+  - Cards: totales, stock crítico, movimientos
+  - Tablas: productos críticos, historial reciente
+  - Solo accesible con report:view
+
+TAREA 5.5 [EMILIO] — Dashboards Grafana (4 obligatorios)
+  - infra/grafana/dashboards/infrastructure.json (CPU, memoria, JVM)
+  - infra/grafana/dashboards/application.json (latencia, throughput, errors)
+  - infra/grafana/dashboards/business.json (endpoints productos/stock)
+  - infra/grafana/dashboards/security.json (401, 403 rates)
+  - infra/grafana/provisioning/ (datasources + dashboard provider)
+  - Verificar en http://localhost:3001 (admin/admin)
+
+TAREA 5.6 [EMILIO] — Documentar observabilidad
+  - Sección en docs/architecture.md: diagrama del stack
+  - Cómo acceder a Grafana, qué muestra cada dashboard
+
+------------------------------------------------------------------------
+CIERRE SEMANA 5
+------------------------------------------------------------------------
+
+TAREA 5.7 [AMBOS]
+  - Hacer request al API -> ver trace en Grafana Tempo
+  - Ver métricas en Prometheus -> dashboards
+  - Provocar un error -> ver en logs Loki
+  - Jean abre PR
+  - NO personalizar Alloy en exceso; que funcione primero
+
+APRENDER ESTA SEMANA:
+  [ ] ¿Diferencia entre métricas, logs y trazas?
+  [ ] ¿Qué hace OpenTelemetry?
+  [ ] ¿Qué es Prometheus y cómo scrapea?
+  [ ] ¿Para qué sirve Grafana?
+  [ ] ¿Qué alertas configuramos y por qué?
+
+================================================================================
+████████████████████████████████████████████████████████████████████████████████
+  SEMANA 6 — TESTING MASIVO (13-19 de julio) — 20% de la nota
+  Objetivo: Todas las categorías de testing con evidencia documentada
+  Presupuesto: 24-25 h por persona | 48-50 h equipo
+  (Ejecutar, documentar y corregir; no solo correr tests una vez)
+████████████████████████████████████████████████████████████████████████████████
+
+ENTREGABLE:
+  -> Carpeta docs/testing/ con reportes y screenshots
+  -> Todos los tipos de test del PDF ejecutados al menos una vez
+  -> Evidencia de exploratory testing
+
+------------------------------------------------------------------------
+TAREAS JEAN
+------------------------------------------------------------------------
+
+TAREA 6.1 [JEAN] — Completar unit tests
+  - StockServiceTest, ReportServiceTest
+  - Coverage report con JaCoCo (./mvnw verify)
+  - Meta: >60% en services
+
+TAREA 6.2 [JEAN] — Integration tests completos
+  - ApiContractTest: OpenAPI disponible, health, prometheus
+  - Todos con Testcontainers
+  - Documentar: requiere Docker
+
+TAREA 6.3 [JEAN] — Performance testing con k6
+  - tests/performance/load-test.js (50 usuarios, 2 min)
+  - tests/performance/stress-test.js (hasta 150 usuarios)
+  - Ejecutar: k6 run tests/performance/load-test.js
+  - Guardar resultados en docs/testing/performance-report.txt
+  - Umbrales: p95 < 2s, error rate < 5%
+
+TAREA 6.4 [JEAN] — Data testing
+  - DataIntegrityTest: migraciones aplicadas, constraints, no duplicados
+  - Verificar seed data consistente
+
+------------------------------------------------------------------------
+TAREAS EMILIO
+------------------------------------------------------------------------
+
+TAREA 6.5 [EMILIO] — E2E con Playwright
+  - npm install @playwright/test
+  - frontend/e2e/app.spec.ts
+  - Tests mínimos:
+      * Login page renderiza
+      * Responsive en móvil (screenshot)
+      * Flujo CRUD producto (con auth)
+      * Flujo stock
+      * Dashboard carga
+  - Screenshots en frontend/test-results/
+  - npm run test:e2e en CI
+
+TAREA 6.6 [EMILIO] — Security testing
+  - tests/security/zap-baseline.sh (OWASP ZAP baseline scan)
+  - Ejecutar contra API en Docker
+  - OWASP Dependency Check en CI (ya en workflow)
+  - Validar manualmente: JWT expirado, CORS, permisos
+  - Guardar reportes en docs/testing/
+
+TAREA 6.7 [EMILIO] — Manual exploratory testing
+  - docs/exploratory/charter-001.md (plantilla incluida abajo)
+  - Mínimo 2 charters de 45 min
+  - Documentar bugs encontrados (aunque sea "ninguno")
+  - Evidencia: screenshots o notas
+
+TAREA 6.8 [EMILIO] — Consolidar docs/testing-guide.md
+  - Tabla: tipo de test, herramienta, ubicación, resultado
+  - Comandos para ejecutar cada suite
+  - Resultados finales
+
+------------------------------------------------------------------------
+CIERRE SEMANA 6
+------------------------------------------------------------------------
+
+TAREA 6.9 [AMBOS]
+  - Ejecutar TODAS las suites y verificar verde
+  - Emilio abre PR
+  - Revisar que hay evidencia para cada tipo del PDF
+
+PLANTILLA CHARTER EXPLORATORIO:
+  ---
+  Charter: [número]
+  Fecha: [fecha]
+  Tester: [Jean o Emilio]
+  Duración: 45 min
+  Alcance: [módulo a explorar]
+  Misión: [qué buscar]
+  Escenarios explorados: [lista]
+  Bugs encontrados: [tabla con severidad]
+  ---
+
+APRENDER ESTA SEMANA:
+  [ ] ¿Diferencia entre unit, integration, E2E, contract testing?
+  [ ] ¿Qué mide k6 y cómo interpretar resultados?
+  [ ] ¿Qué hace OWASP ZAP?
+  [ ] ¿Qué es exploratory testing?
+
+================================================================================
+████████████████████████████████████████████████████████████████████████████████
+  SEMANA 7 — CI/CD + STAGING + CALIDAD (20-26 de julio)
+  Objetivo: Pipelines completos contra entorno desplegado
+  Presupuesto: 22-24 h por persona | 44-48 h equipo
+████████████████████████████████████████████████████████████████████████████████
+
+ENTREGABLE:
+  -> GitHub Actions verde con pipeline completo
+  -> Jenkins pipeline visual ejecutado al menos una vez
+  -> Tests ejecutados contra staging DESPLEGADO (no solo en build)
+  -> SonarCloud configurado
+
+------------------------------------------------------------------------
+TAREAS JEAN (GitHub Actions + SonarCloud)
+------------------------------------------------------------------------
+
+TAREA 7.1 [JEAN] — GitHub Actions pipeline completo
+  - .github/workflows/ci.yml con stages:
+      checkout -> build -> unit tests -> integration tests ->
+      docker build -> deploy staging -> API tests -> security scan
+  - Usar services: postgres para tests en CI
+  - Upload artifacts: coverage, test reports
+
+TAREA 7.2 [JEAN] — Staging environment
+  - infra/docker-compose.staging.yml
+  - Réplica de prod: DB, Keycloak, observabilidad
+  - Variables de entorno reales (.env.staging.example)
+  - Tests post-deploy en CI:
+      curl health, curl api-docs, smoke tests
+
+TAREA 7.3 [JEAN] — SonarCloud
+  - Crear cuenta en sonarcloud.io (gratis para repos públicos)
+  - sonar-project.properties
+  - Configurar SONAR_TOKEN en GitHub Secrets
+  - Quality gate: coverage > 50%, 0 bugs blocker
+
+------------------------------------------------------------------------
+TAREAS EMILIO (Jenkins + E2E en staging)
+------------------------------------------------------------------------
+
+TAREA 7.4 [EMILIO] — Jenkins pipeline visual
+  - infra/jenkins/Jenkinsfile con stages visibles:
+      Checkout -> Build -> Unit Tests -> Integration Tests ->
+      Frontend Build -> Security Scan -> Quality Gate ->
+      Docker Build -> Deploy Staging -> API Tests -> E2E Tests
+  - Opciones para correr Jenkins:
+      a) Docker: jenkins/jenkins:lts con docker.sock montado
+      b) VM gratuita (Oracle Free Tier, Railway)
+  - Screenshot del pipeline verde en Jenkins UI
+
+TAREA 7.5 [EMILIO] — E2E contra staging
+  - Configurar Playwright con E2E_BASE_URL=http://staging-url
+  - Tests corren contra sistema desplegado, no solo en build
+  - Documentar en testing-guide.md
+
+TAREA 7.6 [EMILIO] — OWASP ZAP en CI
+  - zaproxy/action-baseline en GitHub Actions contra staging
+  - Guardar reporte como artifact
+
+------------------------------------------------------------------------
+CIERRE SEMANA 7
+------------------------------------------------------------------------
+
+TAREA 7.7 [AMBOS]
+  - Verificar pipeline GHA verde en push a develop
+  - Verificar Jenkins pipeline (screenshot)
+  - Badge CI en README
+  - Jean abre PR
+  - Sync: ¿entendemos cada stage del pipeline?
+
+APRENDER ESTA SEMANA:
+  [ ] ¿Qué hace cada stage del pipeline?
+  [ ] ¿Por qué tests post-deploy y no solo en build?
+  [ ] ¿Qué mide SonarCloud?
+  [ ] ¿Diferencia entre GHA y Jenkins en este proyecto?
+
+================================================================================
+████████████████████████████████████████████████████████████████████████████████
+  SEMANA 8 — DOCUMENTACIÓN, BUFFER Y PRESENTACIÓN (27 jul - 2 ago)
+  Objetivo: Proyecto entregable y presentable
+  Presupuesto: 20-22 h por persona | 40-44 h equipo
+  (Menos código nuevo; más ensayo, pulido y verificación final)
+████████████████████████████████████████████████████████████████████████████████
+
+ENTREGABLE:
+  -> Documentación completa
+  -> Demo ensayada 15-20 min
+  -> Repo listo para evaluación
+
+------------------------------------------------------------------------
+TAREAS JEAN
+------------------------------------------------------------------------
+
+TAREA 8.1 [JEAN] — docs/architecture.md final
+  - Diagrama C4: contexto, contenedor, componente (usar Mermaid)
+  - Guía de instalación paso a paso
+  - Manual de mantenimiento (cómo agregar permiso, migración, etc.)
+
+TAREA 8.2 [JEAN] — Pulir backend
+  - Revisar bugs de integración (Keycloak + OTel suelen fallar tarde)
+  - Verificar todos los endpoints en Swagger
+  - Clean up logs y configuraciones
+
+TAREA 8.3 [JEAN] — Preparar demo (su parte)
+  - Escenario 1: Login admin -> CRUD producto -> ver auditoría
+  - Escenario 2: Mostrar Grafana dashboards en vivo
+  - Ensayar 7-10 minutos
+
+------------------------------------------------------------------------
+TAREAS EMILIO
+------------------------------------------------------------------------
+
+TAREA 8.4 [EMILIO] — docs/testing-guide.md final
+  - Todos los resultados consolidados
+  - Screenshots de E2E, ZAP, k6, Jenkins, GHA
+  - Tabla de bugs encontrados y estado
+
+TAREA 8.5 [EMILIO] — docs/requirements.md final
+  - Todos los RF y RNF del PDF documentados
+  - Trazabilidad: requisito -> implementación -> test
+
+TAREA 8.6 [EMILIO] — README profesional
+  - Badges: CI, SonarCloud
+  - Screenshots del sistema
+  - Tabla de usuarios demo
+  - Links a documentación
+
+TAREA 8.7 [EMILIO] — Preparar demo (su parte)
+  - Escenario 3: Login viewer -> mostrar 403 / UI restringida
+  - Escenario 4: Flujo stock + alerta stock mínimo
+  - Ensayar 7-10 minutos
+
+------------------------------------------------------------------------
+BUFFER (3-4 agosto)
+------------------------------------------------------------------------
+
+TAREA 8.8 [AMBOS]
+  - CONGELAR features nuevas
+  - Solo fixes críticos
+  - Ensayo final de presentación juntos
+  - Verificar checklist completo del PDF (sección de arriba)
+  - Verificar commits equitativos: git shortlog -sn
+  - Verificar repo compartido con docente
+
+================================================================================
+  RESUMEN DE HORAS Y DISTRIBUCIÓN EQUITATIVA
+================================================================================
+
+CARGA TOTAL ESTIMADA (8 semanas):
+  Por persona : 176-200 horas (22-25 h/semana promedio)
+  Equipo (x2) : 352-400 horas
+
+HORAS POR SEMANA (referencia):
+
+  Semana | Jean+Emilio c/u | Equipo | Intensidad
+  -------|-----------------|--------|----------------------------------
+    1    | 20-22 h         | 40-44  | Aprendizaje, setup
+    2    | 22-24 h         | 44-48  | CRUD + tests
+    3    | 24-25 h         | 48-50  | Keycloak (pico)
+    4    | 22-24 h         | 44-48  | Stock + Envers + UI
+    5    | 24-25 h         | 48-50  | Observabilidad (pico)
+    6    | 24-25 h         | 48-50  | Testing (pico)
+    7    | 22-24 h         | 44-48  | CI/CD
+    8    | 20-22 h         | 40-44  | Docs + presentación
+
+TAREAS POR PERSONA:
+
+                        JEAN (A)          EMILIO (B)        TOTAL
+Semana 1                6 tareas          5 tareas          11
+Semana 2                5 tareas          4 tareas           9
+Semana 3                3 tareas          4 tareas           7
+Semana 4                4 tareas          3 tareas           7
+Semana 5                3 tareas          3 tareas           6
+Semana 6                4 tareas          4 tareas           8
+Semana 7                3 tareas          3 tareas           6
+Semana 8                3 tareas          4 tareas           7
+                        ──────            ──────
+                        31 tareas         30 tareas         61
+
+Ambos participan en cierre de cada semana (TAREA x.ultimo [AMBOS]).
+Alternar quién abre el PR: Semana 1 Jean, Semana 2 Emilio, Semana 3 Jean...
+
+USO DE HORAS EXTRA (si terminan tareas antes de lo previsto):
+  - NO adelantar la semana siguiente
+  - SÍ: mejorar tests, escribir docs de la semana, pair review profundo,
+        refinar UI/UX, agregar comentarios en código, practicar explicar
+        en voz alta lo implementado (prep para presentación)
+
+================================================================================
+  COMANDOS DE REFERENCIA RÁPIDA
+================================================================================
+
+# Levantar todo
+cd infra && docker compose up --build
+
+# Backend local (sin Docker, sin auth)
+cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+
+# Frontend local
+cd frontend && npm install && npm run dev
+
+# Tests backend
+cd backend && ./mvnw test
+
+# Tests E2E
+cd frontend && npm run test:e2e
+
+# Performance
+k6 run tests/performance/load-test.js
+
+# Security scan
+./tests/security/zap-baseline.sh http://localhost:8080
+
+# Ver commits por persona
+git shortlog -sn
+
+# Crear rama de feature
+git checkout develop
+git pull
+git checkout -b feature/nombre-tarea
+
+================================================================================
+  RIESGOS Y MITIGACIÓN
+================================================================================
+
+RIESGO                          MITIGACIÓN
+─────────────────────────────────────────────────────────────────────────
+Keycloak consume mucho tiempo   Semana 3 dedicada; exportar realm JSON;
+                                3 h pair session obligatorias
+Observabilidad compleja         Usar configs de referencia; reservar 4 h
+                                solo para depurar stack en semana 5
+Atraso por bloqueos             Con 20-25 h/sem hay buffer; usar mid-week
+                                sync; no saltar semanas
+Tests E2E flaky                 Playwright retries; datos seed fijos
+Commits desbalanceados          Issues asignados; alternar PRs
+Adelantar semanas por tener     REGLA DE ORO: no pasar de semana sin
+tiempo de sobra                 entregar y ENTENDER la anterior
+
+================================================================================
+  NOTA FINAL
+================================================================================
+
+Este documento es la guía maestra. Construyan el proyecto NUEVO siguiendo
+semana por semana. No intenten hacer todo de golpe. Con 20-25 h/semana
+tienen margen cómodo, pero ese margen es para entender mejor y pulir,
+NO para saltarse el ritmo semanal. Si en alguna semana se atrasan, usen
+el buffer de horas antes de pensar en comprimir semanas.
+
+El éxito del proyecto no es solo que funcione, sino que Jean y Emilio
+puedan explicar cada decisión técnica en la presentación final.
+
+¡Éxito con el proyecto!
+
+================================================================================
+  FIN DEL DOCUMENTO
+================================================================================

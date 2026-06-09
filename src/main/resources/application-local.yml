@@ -1,0 +1,7 @@
+# Perfil local: desarrollo sin Keycloak (Semana 1-2)
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081/realms/inventory
