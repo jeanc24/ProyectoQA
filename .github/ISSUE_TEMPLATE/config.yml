@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Guía de contribución
+    url: https://github.com/jeanc24/ProyectoQA/blob/main/CONTRIBUTING.md
+    about: Conventional Commits, ramas y flujo de PR
+  - name: Plan del sprint (Avance 16 jun)
+    url: https://github.com/jeanc24/ProyectoQA/blob/main/PLAN-PASO-A-PASO.txt
+    about: Checklist y tareas día a día

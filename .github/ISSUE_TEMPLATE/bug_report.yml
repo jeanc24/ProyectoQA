@@ -1,0 +1,64 @@
+name: Reporte de bug
+description: Algo no funciona como se espera
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe el bug con el máximo detalle posible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Qué pasó
+      placeholder: Al crear un producto con SKU duplicado, la API devuelve 500 en lugar de 409.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      value: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamiento esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportamiento actual
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área afectada
+      options:
+        - Backend / API
+        - Frontend
+        - Docker / Infra
+        - Keycloak / Auth
+        - Tests / CI
+        - Otro
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Rama o commit
+      placeholder: develop @ abc1234
+    validations:
+      required: false

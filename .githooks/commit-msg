@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+# Valida Conventional Commits en cada commit local.
+# Activar: git config core.hooksPath .githooks
+
+commit_msg_file="$1"
+commit_msg=$(head -n 1 "$commit_msg_file")
+
+# Merge/revert commits de Git
+case "$commit_msg" in
+  Merge\ *|Revert\ \"*\"|fixup!\ *|squash!\ *)
+    exit 0
+    ;;
+esac
+
+pattern='^(feat|fix|test|docs|chore|ci|refactor|perf|style)(\([a-z0-9._/-]+\))?: .{3,72}$'
+
+if ! printf '%s' "$commit_msg" | grep -Eq "$pattern"; then
+  echo "❌ Commit rechazado: formato Conventional Commits inválido."
+  echo ""
+  echo "   Formato: <tipo>(<alcance>): <descripción>"
+  echo "   Tipos:   feat | fix | test | docs | chore | ci | refactor | perf | style"
+  echo ""
+  echo "   Ejemplo: feat(api): add product CRUD endpoints"
+  echo ""
+  echo "   Mensaje recibido:"
+  echo "   $commit_msg"
+  echo ""
+  echo "   Ver CONTRIBUTING.md para más detalles."
+  exit 1
+fi
+
+exit 0

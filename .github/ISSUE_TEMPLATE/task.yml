@@ -1,0 +1,101 @@
+name: Tarea del sprint
+description: Tarea concreta del avance (backend, frontend, infra, tests)
+title: "[TAREA] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usar para tareas del sprint **Avance 16-Jun 2026**.
+        Un issue = una rama = un PR. Ver `CONTRIBUTING.md`.
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Sprint
+      options:
+        - Avance 16-Jun 2026
+        - Post-avance
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Backend / API
+        - Frontend
+        - Infra / Docker
+        - Seguridad / Keycloak
+        - Testing
+        - CI/CD
+        - Observabilidad
+        - Documentación
+    validations:
+      required: true
+
+  - type: input
+    id: assignee
+    attributes:
+      label: Asignado
+      description: "Jean o Emilio"
+      placeholder: Jean
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción
+      description: Qué hay que implementar y criterio de aceptación
+      placeholder: |
+        Como [rol], necesito [acción] para [beneficio].
+
+        **Criterios de aceptación:**
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Subtareas
+      description: Lista de pasos técnicos
+      value: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: false
+
+  - type: input
+    id: commit_hint
+    attributes:
+      label: Commit sugerido (Conventional Commits)
+      placeholder: "feat(api): add product CRUD with validations"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: pdf_requirement
+    attributes:
+      label: Requisito del PDF de avance
+      options:
+        - Seguridad
+        - Base de datos
+        - Funcionalidad
+        - Testing
+        - GitHub
+        - Auditoría
+        - API REST
+        - Integration Testing
+        - API Testing
+        - Docker
+        - GitHub Actions
+        - Jenkins
+        - Observabilidad
+        - Playwright
+        - N/A
+    validations:
+      required: true

@@ -1,0 +1,42 @@
+name: Feature / mejora
+description: Nueva funcionalidad fuera del sprint actual o mejora post-avance
+title: "[FEAT] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema o necesidad
+      placeholder: El operador de stock no puede ver alertas de mínimo en el dashboard.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solución propuesta
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridad
+      options:
+        - Avance 16-Jun (bloqueante)
+        - Alta (post-avance)
+        - Media
+        - Baja
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: pdf
+    attributes:
+      label: Relacionado con requisito del PDF
+      options:
+        - label: Seguridad
+        - label: Funcionalidad
+        - label: Testing
+        - label: Observabilidad
+        - label: CI/CD
