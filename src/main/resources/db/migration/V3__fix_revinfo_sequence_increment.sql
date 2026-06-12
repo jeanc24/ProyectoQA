@@ -1,0 +1,1 @@
+ALTER SEQUENCE revinfo_seq INCREMENT BY 50;
