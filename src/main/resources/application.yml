@@ -11,8 +11,6 @@ spring:
     open-in-view: false
     properties:
       org.hibernate.envers.audit_table_suffix: _audit
-      org.hibernate.envers.revision_field_name: revision_id
-      org.hibernate.envers.revision_type_field_name: revision_type
   flyway:
     enabled: true
     locations: classpath:db/migration
