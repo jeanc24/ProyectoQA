@@ -16,10 +16,8 @@ import jakarta.persistence.Table;
 
 import java.time.Instant;
 
-/**
- * Registro de entrada, salida o ajuste de stock.
- * Incluye cantidad anterior, nueva, usuario y observaciones (PDF).
- */
+// Registro de entrada, salida o ajuste de stock.
+
 @Entity
 @Table(name = "stock_movements")
 public class StockMovement {
