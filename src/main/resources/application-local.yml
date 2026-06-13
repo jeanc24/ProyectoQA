@@ -1,1 +1,9 @@
-# Perfil local: desarrollo sin Keycloak (OAuth2 se activa en perfil docker)
+# local profile: development without keycloak (OAuth2 activates in the docker profile)
+# To run in local use the command bootrun with the argument "--spring.profiles.active=local"
+
+# .\gradlew bootRun --args="--spring.profiles.active=local"
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5433/inventory
+    username: inventory
+    password: inventory
