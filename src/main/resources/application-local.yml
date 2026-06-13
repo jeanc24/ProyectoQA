@@ -1,7 +1,9 @@
-# Perfil local: desarrollo sin Keycloak (Semana 1-2)
+# local profile: development without keycloak (OAuth2 activates in the docker profile)
+# To run in local use the command bootrun with the argument "--spring.profiles.active=local"
+
+# .\gradlew bootRun --args="--spring.profiles.active=local"
 spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8081/realms/inventory
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5433/inventory
+    username: inventory
+    password: inventory

@@ -12,15 +12,11 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.RelationTargetAuditMode;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/**
- * Producto del inventario.
- * Campos según PDF: nombre, SKU, descripción, categoría, precio,
- * cantidad, stock mínimo y estado activo/inactivo.
- */
 @Entity
 @Table(name = "products")
 @Audited
@@ -41,6 +37,7 @@ public class Product {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     private Category category;
 
     @Column(nullable = false, precision = 12, scale = 2)
