@@ -1,14 +1,24 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
-function Login() {
+export default function Login() {
+  const { isAuthenticated, login } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/products", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
   return (
-    <div>
-      <h1>Login</h1>
-      <p>Esta es la página de login.</p>
-
-      <Link to="/products">Ir a Products</Link>
+    <div className="page">
+      <h1>Inventario</h1>
+      <p>Inicia sesión con Keycloak para gestionar productos.</p>
+      <button type="button" onClick={login}>
+        Iniciar sesión
+      </button>
     </div>
   );
 }
-
-export default Login;
