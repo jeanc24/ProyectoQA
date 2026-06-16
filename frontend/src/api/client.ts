@@ -17,7 +17,8 @@ export class ApiError extends Error {
   }
 }
 
-// Injects the token into the all the api calls if the user is authenticated to avoid expired tokens
+// Injects the jwt token into the all the api calls if the user is authenticated to avoid expired tokens
+// this is defined in the keycloak.ts file using the keycloak-js library
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},

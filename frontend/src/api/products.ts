@@ -1,7 +1,8 @@
-import { apiFetch } from "./client";
+import { apiFetch } from "./client"; // Injects the jwt token into the headers to avoid expired tokens using the apiFetch function
 import type { PageResponse, ProductRequest, ProductResponse } from "../types/product";
 
 export function listProducts(page = 0, size = 20) {
+  // Fetches the products from the api
   return apiFetch<PageResponse<ProductResponse>>(
     `/api/v1/products?page=${page}&size=${size}`,
   );

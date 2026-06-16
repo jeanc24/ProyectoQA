@@ -10,7 +10,8 @@ spring:
       ddl-auto: validate
     open-in-view: false
     properties:
-      org.hibernate.envers.audit_table_suffix: _audit
+      org.hibernate.envers.audit_table_suffix: _audit # Suffix for the audit table
+      org.hibernate.envers.revision_sequence_name: revinfo_seq # Sequence for the revision table
   flyway:
     enabled: true
     locations: classpath:db/migration
