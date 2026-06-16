@@ -28,6 +28,18 @@ services:
       - "8081:8080"
     volumes:
       - ./keycloak:/opt/keycloak/data/import
-
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8080
+        VITE_KEYCLOAK_URL: http://localhost:8081
+        VITE_KEYCLOAK_REALM: inventory
+        VITE_KEYCLOAK_CLIENT_ID: inventory-frontend
+    container_name: inventory-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - keycloak
 volumes:
   postgres_data:
