@@ -5,10 +5,13 @@ Sistema de Gestión de Inventarios Empresarial — PUCMM, Aseguramiento de Calid
 Stack: Spring Boot (Gradle) · React · PostgreSQL · Keycloak · Docker
 
 ![CI](https://github.com/jeanc24/ProyectoQA/actions/workflows/ci.yml/badge.svg?branch=develop)
+![Conventional Commits](https://github.com/jeanc24/ProyectoQA/actions/workflows/conventional-commits.yml/badge.svg?branch=develop)
 
 ## CI (GitHub Actions)
 
 Cada **push** o **pull request** hacia la rama `develop` ejecuta el workflow [**CI**](https://github.com/jeanc24/ProyectoQA/actions/workflows/ci.yml).
+
+Los **pull requests** hacia `develop` o `main` también ejecutan [**Conventional Commits**](https://github.com/jeanc24/ProyectoQA/actions/workflows/conventional-commits.yml) para validar los mensajes de commit.
 
 ### Ver el estado del pipeline
 
