@@ -16,7 +16,7 @@ export default function Login() {
     <div className="page">
       <h1>Inventario</h1>
       <p>Inicia sesión con Keycloak para gestionar productos.</p>
-      <button type="button" onClick={login}>
+      <button type="button" data-testid="login-button" onClick={login}>
         Iniciar sesión
       </button>
     </div>

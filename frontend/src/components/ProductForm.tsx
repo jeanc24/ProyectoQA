@@ -47,6 +47,7 @@ export default function ProductForm({
             required
             maxLength={150}
             value={form.name}
+            data-testid="product-name"
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
         </label>
@@ -57,6 +58,7 @@ export default function ProductForm({
             required
             maxLength={50}
             value={form.sku}
+            data-testid="product-sku"
             onChange={(e) => setForm({ ...form, sku: e.target.value })}
           />
         </label>
@@ -69,6 +71,7 @@ export default function ProductForm({
             min={0}
             step="0.01"
             value={form.price}
+            data-testid="product-price"
             onChange={(e) =>
               setForm({ ...form, price: Number(e.target.value) })
             }
@@ -82,6 +85,7 @@ export default function ProductForm({
             type="number"
             min={0}
             value={form.quantity}
+            data-testid="product-quantity"
             onChange={(e) =>
               setForm({ ...form, quantity: Number(e.target.value) })
             }
@@ -95,6 +99,7 @@ export default function ProductForm({
             type="number"
             min={0}
             value={form.minStock}
+            data-testid="product-min-stock"
             onChange={(e) =>
               setForm({ ...form, minStock: Number(e.target.value) })
             }
@@ -135,7 +140,7 @@ export default function ProductForm({
       </label>
 
       <div className="actions">
-        <button type="submit" disabled={saving}>
+        <button type="submit" disabled={saving} data-testid="product-submit">
           {saving ? "Guardando..." : submitLabel}
         </button>
         <button type="button" onClick={onCancel}>

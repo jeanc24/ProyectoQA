@@ -107,6 +107,7 @@ export default function Products() {
           {canManage && (
             <button
               type="button"
+              data-testid="create-product-button"
               onClick={() => {
                 setEditing(null);
                 setShowForm(true);
@@ -164,7 +165,7 @@ export default function Products() {
       {loading ? (
         <p>Cargando productos...</p>
       ) : (
-        <table className="products-table">
+        <table className="products-table" data-testid="products-table">
           <thead>
             <tr>
               <th>ID</th>
