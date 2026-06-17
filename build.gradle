@@ -5,13 +5,11 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
-
 jacoco {
     toolVersion = '0.8.12'
 }
 
 jacocoTestReport {
- 
     dependsOn test
     reports {
         xml.required = true
@@ -25,7 +23,7 @@ jacocoTestCoverageVerification {
         rule {
             element = 'CLASS'
             includes = ['icc354.pucmm.proyectoqa.application.service.*']
-            excludes = ['icc354.pucmm.proyectoqa.application.service.AuditService'] //Temporal: Excluimos el servicio de auditoría para que no afecte el coverage
+            excludes = ['icc354.pucmm.proyectoqa.application.service.AuditService']
             limit {
                 counter = 'LINE'
                 minimum = 0.60
@@ -56,31 +54,19 @@ ext {
 }
 
 dependencies {
-    // Web y API REST
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-
-    // Base de datos
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'org.postgresql:postgresql'
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
     runtimeOnly 'org.flywaydb:flyway-database-postgresql'
-
-    // Auditoría (Hibernate Envers) — Semana 4
     implementation 'org.hibernate.orm:hibernate-envers'
-
-    // Seguridad OAuth2 / Keycloak — Semana 3
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-
-    // Observabilidad — Semana 5
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
-
-    // OpenAPI / Swagger — Semana 2
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
 
-    // Tests
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.security:spring-security-test'

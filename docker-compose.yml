@@ -15,7 +15,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      
+
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: inventory-prometheus
@@ -40,7 +40,7 @@ services:
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
-      
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: inventory-keycloak
