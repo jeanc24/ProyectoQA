@@ -94,7 +94,7 @@ class ProductServiceTest {
         ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(captor.capture());
 
-        assertThat(captor.getValue().getSku()).isEqualTo("SKU-ROTO");
+        assertThat(captor.getValue().getSku()).isEqualTo("LAP-001");
         assertThat(captor.getValue().getName()).isEqualTo("Laptop Pro");
         assertThat(response.id()).isEqualTo(10L);
         assertThat(response.categoryName()).isEqualTo("Electronics");
