@@ -97,7 +97,12 @@ El hook valida el formato antes de completar cada commit. Para saltarlo en emerg
 ```bash
 git commit --no-verify -m "mensaje"
 ```
+## Validación en CI (Pull Requests)
 
+Además del hook local, GitHub Actions valida **todos los commits del PR** con el workflow
+`.github/workflows/conventional-commits.yml` al abrir o actualizar un PR hacia `develop` o `main`.
+
+Si el check falla, corrige los mensajes con `git rebase -i` o `git commit --amend` antes del merge.
 ---
 
 ## Issues y labels

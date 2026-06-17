@@ -1,0 +1,47 @@
+name: Conventional Commits
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  commit-messages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        run: |
+          pattern='^(feat|fix|test|docs|chore|ci|refactor|perf|style)(\([a-z0-9._/-]+\))?: .{3,72}$'
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          invalid=0
+
+          while IFS= read -r subject; do
+            case "$subject" in
+              Merge\ *|Revert\ \"*\"|fixup!\ *|squash!\ *)
+                continue
+                ;;
+            esac
+
+            if ! printf '%s' "$subject" | grep -Eq "$pattern"; then
+              echo "Invalid commit message: $subject"
+              invalid=1
+            fi
+          done < <(git log --format=%s "${base}..${head}")
+
+          if [ "$invalid" -ne 0 ]; then
+            echo ""
+            echo "One or more commits do not follow Conventional Commits."
+            echo "Format: <type>(<scope>): <description>"
+            echo "Types: feat | fix | test | docs | chore | ci | refactor | perf | style"
+            echo "See CONTRIBUTING.md for details."
+            exit 1
+          fi
+
+          echo "All commit messages are valid."
