@@ -1,13 +1,11 @@
 package icc354.pucmm.proyectoqa;
 
+import icc354.pucmm.proyectoqa.application.integration.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class ProyectoQaApplicationTests {
+class ProyectoQaApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void contextLoads() {
     }
-
 }

@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1/products")
@@ -42,6 +43,7 @@ public class ProductController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('product:view')")
     @Operation(
             summary = "List products",
             description = "Returns a paginated list of products and allows filtering by name, SKU, category, and active status."
@@ -70,6 +72,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('product:view')")
     @Operation(
             summary = "Get product by ID",
             description = "Returns a single product using its unique identifier."
@@ -86,6 +89,7 @@ public class ProductController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('product:manage')")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Create product",
@@ -108,6 +112,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('product:manage')")
     @Operation(
             summary = "Update product",
             description = "Updates an existing product."
@@ -133,6 +138,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('product:manage')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(
             summary = "Delete product",
