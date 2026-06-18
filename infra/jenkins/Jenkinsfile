@@ -31,6 +31,11 @@ pipeline {
 
         stage('Integration Tests') {
             options { timeout(time: 20, unit: 'MINUTES') }
+            environment {
+                TESTCONTAINERS_RYUK_DISABLED = 'true'
+                DOCKER_HOST = 'unix:///var/run/docker.sock'
+                TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
+            }
             steps {
                 sh './gradlew integrationTest --no-daemon'
             }

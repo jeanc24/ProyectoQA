@@ -53,6 +53,14 @@ En el asistente inicial o **Manage Jenkins → Plugins**:
 
 El contenedor Jenkins monta `/var/run/docker.sock` para que Testcontainers pueda levantar PostgreSQL durante `integrationTest`.
 
+En Jenkins dentro de Docker (Mac), el stage **Integration Tests** define:
+
+- `TESTCONTAINERS_RYUK_DISABLED=true`
+- `DOCKER_HOST=unix:///var/run/docker.sock`
+- `TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal`
+
+Ver [`infra/jenkins/Jenkinsfile`](../../../infra/jenkins/Jenkinsfile).
+
 ## Reproducir sin Jenkins (mismos comandos)
 
 ```bash
