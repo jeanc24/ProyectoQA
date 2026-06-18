@@ -17,26 +17,26 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-// Servicio de auditoría
+// audit service
 @Service
-// Transacción de solo lectura
+// Transaction of only read
 @Transactional(readOnly = true)
 
-// Constructor del servicio de auditoría
-//Funcion para obtener el historial de un producto y
+// Constructor of the audit service
+//Function to get the history of a product and return it in a list of ProductRevisionResponse
 public class AuditService {
 
     private final ProductRepository productRepository;
-    // EntityManager para la persistencia de la entidad
+    // EntityManager for the persistence of the entity
     @PersistenceContext
     private EntityManager entityManager;
 
-    // Constructor del servicio de auditoría
+    // Constructor of the audit service
     public AuditService(ProductRepository productRepository) {
         this.productRepository = productRepository;
     }
 
-    // Funcion para obtener el historial de un producto y devolverlo en una lista de ProductRevisionResponse
+    // Function to get the history of a product and return it in a list of ProductRevisionResponse
     public List<ProductRevisionResponse> getProductHistory(Long productId) {
         if (!productRepository.existsById(productId) && !hasAuditHistory(productId)) {
             throw new ResourceNotFoundException("Product not found: " + productId);
@@ -57,14 +57,14 @@ public class AuditService {
         }
         return history;
     }
-    // Funcion para verificar si el producto tiene historial de auditoria
+    // Function to check if the product has audit history
     private boolean hasAuditHistory(Long productId) {
         AuditReader auditReader = AuditReaderFactory.get(entityManager);
         List<Number> revisions = auditReader.getRevisions(Product.class, productId);
         return !revisions.isEmpty();
     }
 
-    // Funcion para convertir el historial de auditoria en un objeto ProductRevisionResponse
+    // Function to convert the audit history into a ProductRevisionResponse object
     private ProductRevisionResponse toResponse(Long productId, Object[] row) {
         Product product = (Product) row[0];
         DefaultRevisionEntity revisionEntity = (DefaultRevisionEntity) row[1];

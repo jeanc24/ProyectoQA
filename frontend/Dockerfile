@@ -3,8 +3,9 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# Copy only necessary files to install dependencies (use Docker cache)
+# COPY PACKAGE.JSON AND PACKAGE-LOCK.JSON TO INSTALL DEPENDENCIES
 COPY package.json package-lock.json ./
+# INSTALL DEPENDENCIES
 RUN npm ci
 
 # Copy the rest of the code

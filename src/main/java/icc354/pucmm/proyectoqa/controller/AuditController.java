@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-// Controlador de la auditoria de un producto
+// Controller for the audit of a product
 @RestController
 @RequestMapping("/api/v1/audit/products")
 @Tag(
@@ -28,21 +28,21 @@ public class AuditController {
     public AuditController(AuditService auditService) {
         this.auditService = auditService;
     }
-    // Funcion para obtener el historial de auditoria de un producto
+    // Function to get the audit history of a product
     @GetMapping("/{id}")
-    // PreAuthorize para verificar si el usuario tiene permisos para ver el historial de auditoria
+    // PreAuthorize to check if the user has permissions to view the audit history
     @PreAuthorize("hasAuthority('product:view')")
-    // Operation para documentar la funcion
+    // Operation to document the function
     @Operation(
             summary = "Get product audit history",
             description = "Returns all Envers revisions for a product, ordered by revision number."
     )
-    // ApiResponses para documentar las respuestas de la funcion
+    // ApiResponses to document the responses of the function
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Audit history retrieved successfully"),
             @ApiResponse(responseCode = "404", description = "Product not found")
     })
-    // Funcion para obtener el historial de auditoria de un producto
+    // Function to get the audit history of a product
     public List<ProductRevisionResponse> getHistory(
             @Parameter(description = "Product ID", required = true, example = "1")
             @PathVariable Long id) {

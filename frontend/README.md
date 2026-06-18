@@ -2,53 +2,42 @@
 
 React + Vite + TypeScript. Login con Keycloak y CRUD de productos.
 
-## Levantar el stack
+La documentación completa de instalación, puertos, usuarios demo, pruebas y escenarios reproducibles está en el **[README principal](../README.md)**.
 
-Desde la raíz del repo:
+## Comandos frecuentes
 
-```bash
-docker compose up --build -d postgres keycloak frontend
-```
 
-Frontend: [http://localhost:3000](http://localhost:3000) · Keycloak: `:8081` · Postgres: `:5433`
+| Acción                 | Comando                                                        |
+| ---------------------- | -------------------------------------------------------------- |
+| Dev local (hot-reload) | `npm run dev` → [http://localhost:5173](http://localhost:5173) |
+| Build producción       | `npm run build`                                                |
+| Lint                   | `npm run lint`                                                 |
+| E2E (Playwright)       | `npm run test:e2e`                                             |
+| E2E interactivo        | `npm run test:e2e:ui`                                          |
 
-API (aún fuera de compose):
 
-```powershell
-# Windows
-$env:CORS_ORIGINS="http://localhost:3000"
-.\gradlew bootRun --args="--spring.profiles.active=docker"
-```
+## Arranque rápido (desarrollo)
 
-```bash
-# Linux / macOS
-CORS_ORIGINS=http://localhost:3000 ./gradlew bootRun --args="--spring.profiles.active=docker"
-```
-
-> Tras cambiar código del frontend: `docker compose up --build frontend`
-
-## Desarrollo local
+Requiere Postgres, Keycloak y API en Docker (ver [README](../README.md#opción-b--desarrollo-local-del-frontend)):
 
 ```bash
-docker compose up -d postgres keycloak
-cd frontend && npm install && npm run dev
-```
-
-App en [http://localhost:5173](http://localhost:5173). Variables en `.env.example`.
-
-**Usuarios:** `admin` / `admin` (CRUD) · `viewer` / `viewer` (solo lectura)
-
-## Pruebas E2E (Playwright)
-
-Corren contra Docker en `:3000` (no contra `npm run dev`). Requisitos: stack arriba + API en `:8080`.
-
-```bash
-cd frontend
+docker compose up -d postgres keycloak api
+cp .env.example .env
 npm install
-npx playwright install chromium   # solo la primera vez
-npm run test:e2e
+npm run dev
 ```
 
-Otros: `npm run test:e2e:ui` · reporte HTML: `npx playwright test --reporter=html && npx playwright show-report`
+## E2E
 
-Tests: login admin → `/products` · crear producto y verificar fila en tabla.
+Los tests E2E usan el frontend en **:3000** (contenedor), no `npm run dev`. Ver [Pruebas E2E](../README.md#tests-e2e-playwright) en el README principal.
+
+## Estructura relevante
+
+```
+frontend/
+├── src/           # UI: Login, Products, AuthContext
+├── e2e/           # Playwright: login.spec.ts, products.spec.ts
+├── .env.example   # VITE_API_URL, VITE_KEYCLOAK_*
+└── playwright.config.ts
+```
+
