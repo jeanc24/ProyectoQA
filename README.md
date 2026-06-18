@@ -56,6 +56,16 @@ Tras cada ejecución, el workflow publica el artefacto **`jacoco-report`**:
 
 > **Nota:** los integration tests requieren Docker en ejecución (Testcontainers).
 
+## CI (Jenkins)
+
+Pipeline declarativo en [`infra/jenkins/Jenkinsfile`](infra/jenkins/Jenkinsfile) con los mismos stages que GitHub Actions.
+
+```bash
+docker compose up -d jenkins   # UI en http://localhost:8082
+```
+
+Instrucciones completas, configuración del job y evidencia del build: **[docs/avance-1/ci/README.md](docs/avance-1/ci/README.md)**.
+
 ## Contribuir
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — Conventional Commits, ramas, flujo de PR
