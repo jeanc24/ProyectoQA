@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        timestamps()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            options { timeout(time: 15, unit: 'MINUTES') }
+            steps {
+                sh 'chmod +x gradlew'
+                sh './gradlew build -x test --no-daemon'
+            }
+        }
+
+        stage('Unit Tests') {
+            options { timeout(time: 15, unit: 'MINUTES') }
+            steps {
+                sh './gradlew test --no-daemon'
+            }
+        }
+
+        stage('Integration Tests') {
+            options { timeout(time: 20, unit: 'MINUTES') }
+            steps {
+                sh './gradlew integrationTest --no-daemon'
+            }
+        }
+    }
+
+    post {
+        always {
+            junit allowEmptyResults: true, testResults: 'build/test-results/test/*.xml,build/test-results/integrationTest/*.xml'
+            archiveArtifacts artifacts: 'build/reports/jacoco/test/**', allowEmptyArchive: true
+        }
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Check stage logs.'
+        }
+    }
+}
