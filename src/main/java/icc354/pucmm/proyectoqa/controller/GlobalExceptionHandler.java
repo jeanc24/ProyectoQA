@@ -1,6 +1,7 @@
 package icc354.pucmm.proyectoqa.controller;
 
 import icc354.pucmm.proyectoqa.domain.exception.DuplicateSkuException;
+import icc354.pucmm.proyectoqa.domain.exception.InsufficientStockException;
 import icc354.pucmm.proyectoqa.domain.exception.ResourceNotFoundException;
 import icc354.pucmm.proyectoqa.dto.ErrorResponse;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,6 +30,26 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(
                 HttpStatus.CONFLICT.value(),
                 "Conflict",
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInsufficientStock(InsufficientStockException ex) {
+        return ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleIllegalArgument(IllegalArgumentException ex) {
+        return ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
                 ex.getMessage()
         );
     }
