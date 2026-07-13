@@ -20,6 +20,18 @@
           "description": "Create, update and delete products",
           "composite": false,
           "clientRole": true
+        },
+        {
+          "name": "stock:view",
+          "description": "View stock levels and movement history",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "stock:manage",
+          "description": "Register stock entries, exits and adjustments",
+          "composite": false,
+          "clientRole": true
         }
       ]
     }
@@ -89,7 +101,7 @@
         }
       ],
       "clientRoles": {
-        "inventory-api": ["product:view", "product:manage"]
+        "inventory-api": ["product:view", "product:manage", "stock:view", "stock:manage"]
       }
     },
     {
@@ -108,7 +120,7 @@
         }
       ],
       "clientRoles": {
-        "inventory-api": ["product:view"]
+        "inventory-api": ["product:view", "stock:view"]
       }
     }
   ]
