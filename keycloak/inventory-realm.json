@@ -32,6 +32,12 @@
           "description": "Register stock entries, exits and adjustments",
           "composite": false,
           "clientRole": true
+        },
+        {
+          "name": "report:view",
+          "description": "View reports and dashboard metrics",
+          "composite": false,
+          "clientRole": true
         }
       ]
     }
@@ -101,7 +107,7 @@
         }
       ],
       "clientRoles": {
-        "inventory-api": ["product:view", "product:manage", "stock:view", "stock:manage"]
+        "inventory-api": ["product:view", "product:manage", "stock:view", "stock:manage", "report:view"]
       }
     },
     {
