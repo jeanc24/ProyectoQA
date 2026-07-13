@@ -4,28 +4,46 @@ import icc354.pucmm.proyectoqa.domain.entity.StockMovement;
 import icc354.pucmm.proyectoqa.domain.enums.MovementType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
-public interface StockMovementRepository extends JpaRepository<StockMovement, Long> {
+public interface StockMovementRepository
+        extends JpaRepository<StockMovement, Long>, JpaSpecificationExecutor<StockMovement> {
 
     Page<StockMovement> findByProductIdOrderByCreatedAtDesc(Long productId, Pageable pageable);
 
-    @Query("""
-            SELECT m FROM StockMovement m
-            WHERE (:productId IS NULL OR m.product.id = :productId)
-              AND (:movementType IS NULL OR m.movementType = :movementType)
-              AND (:from IS NULL OR m.createdAt >= :from)
-              AND (:to IS NULL OR m.createdAt <= :to)
-            ORDER BY m.createdAt DESC
-            """)
-    Page<StockMovement> findFiltered(
-            @Param("productId") Long productId,
-            @Param("movementType") MovementType movementType,
-            @Param("from") Instant from,
-            @Param("to") Instant to,
-            Pageable pageable);
+    static Specification<StockMovement> withFilters(
+            Long productId,
+            MovementType movementType,
+            Instant from,
+            Instant to) {
+
+        return (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+
+            if (productId != null) {
+                predicates.add(cb.equal(root.get("product").get("id"), productId));
+            }
+            if (movementType != null) {
+                predicates.add(cb.equal(root.get("movementType"), movementType));
+            }
+            if (from != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from));
+            }
+            if (to != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), to));
+            }
+
+            if (query != null) {
+                query.orderBy(cb.desc(root.get("createdAt")));
+            }
+
+            return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+    }
 }

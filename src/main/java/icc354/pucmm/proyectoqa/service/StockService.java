@@ -36,7 +36,7 @@ public class StockService {
             Pageable pageable) {
 
         Page<StockMovementResponse> page = stockMovementRepository
-                .findFiltered(productId, movementType, from, to, pageable)
+                .findAll(StockMovementRepository.withFilters(productId, movementType, from, to), pageable)
                 .map(this::toResponse);
 
         return PageResponse.from(page);
