@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,6 +17,21 @@ public interface StockMovementRepository
         extends JpaRepository<StockMovement, Long>, JpaSpecificationExecutor<StockMovement> {
 
     Page<StockMovement> findByProductIdOrderByCreatedAtDesc(Long productId, Pageable pageable);
+
+    Page<StockMovement> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    /**
+     * Top products by units leaving inventory (OUT abs delta).
+     * Returns Object[]: [productId, productName, productSku, unitsOut]
+     */
+    @Query("""
+            SELECT m.product.id, m.product.name, m.product.sku, SUM(ABS(m.quantityDelta))
+            FROM StockMovement m
+            WHERE m.movementType = icc354.pucmm.proyectoqa.domain.enums.MovementType.OUT
+            GROUP BY m.product.id, m.product.name, m.product.sku
+            ORDER BY SUM(ABS(m.quantityDelta)) DESC
+            """)
+    List<Object[]> findTopProductsByUnitsOut(Pageable pageable);
 
     static Specification<StockMovement> withFilters(
             Long productId,
