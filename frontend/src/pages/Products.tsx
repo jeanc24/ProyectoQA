@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import ProductForm from "../components/ProductForm";
+import Layout from "../components/Layout";
 import {
   createProduct,
   deleteProduct,
@@ -24,7 +25,7 @@ function toForm(product: ProductResponse): ProductRequest {
 }
 
 export default function Products() {
-  const { username, logout, hasRole } = useAuth();
+  const { hasRole } = useAuth();
   const canManage = hasRole("product:manage");
 
   const [products, setProducts] = useState<ProductResponse[]>([]);
@@ -97,32 +98,30 @@ export default function Products() {
   }
 
   return (
-    <div className="page page-left">
-      <header className="page-header">
-        <div>
-          <h1>Productos</h1>
-          <p>Sesión: {username ?? "—"}</p>
-        </div>
-        <div className="actions">
-          {canManage && (
-            <button
-              type="button"
-              data-testid="create-product-button"
-              onClick={() => {
-                setEditing(null);
-                setShowForm(true);
-                setError(null);
-                setFieldErrors([]);
-              }}
-            >
-              Crear producto
-            </button>
-          )}
-          <button type="button" onClick={logout}>
-            Cerrar sesión
-          </button>
-        </div>
-      </header>
+    <Layout>
+      <div className="page page-left">
+        <header className="page-header">
+          <div>
+            <h1>Productos</h1>
+            <p>Gestión del catálogo de inventario</p>
+          </div>
+          <div className="actions">
+            {canManage && (
+              <button
+                type="button"
+                data-testid="create-product-button"
+                onClick={() => {
+                  setEditing(null);
+                  setShowForm(true);
+                  setError(null);
+                  setFieldErrors([]);
+                }}
+              >
+                Crear producto
+              </button>
+            )}
+          </div>
+        </header>
 
       {error && (
         <div className="alert alert-error" role="alert">
@@ -214,6 +213,7 @@ export default function Products() {
           </tbody>
         </table>
       )}
-    </div>
+      </div>
+    </Layout>
   );
 }
