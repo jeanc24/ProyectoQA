@@ -7,11 +7,41 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     boolean existsBySku(String sku);
 
     boolean existsBySkuAndIdNot(String sku, Long id);
+
+    long countByActiveTrue();
+
+    long countByActiveFalse();
+
+    @Query("""
+            SELECT COUNT(p) FROM Product p
+            WHERE p.quantity <= p.minStock
+            """)
+    long countLowStock();
+
+    @Query("""
+            SELECT COALESCE(SUM(p.quantity), 0) FROM Product p
+            """)
+    long sumTotalUnits();
+
+    @Query("""
+            SELECT COALESCE(SUM(p.price * p.quantity), 0) FROM Product p
+            """)
+    BigDecimal sumInventoryValue();
+
+    @Query("""
+            SELECT p FROM Product p
+            WHERE p.quantity <= p.minStock
+            ORDER BY p.quantity ASC, p.name ASC
+            """)
+    List<Product> findLowStock(Pageable pageable);
 
     @Query(
             value = """
