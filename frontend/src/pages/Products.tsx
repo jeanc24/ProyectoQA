@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
+import AppHeader from "../components/AppHeader";
 import ProductForm from "../components/ProductForm";
 import {
   createProduct,
@@ -30,7 +31,7 @@ function toForm(product: ProductResponse): ProductRequest {
 }
 
 export default function Products() {
-  const { username, logout, hasRole } = useAuth();
+  const { hasRole } = useAuth();
   const canManage = hasRole("product:manage");
 
   const [products, setProducts] = useState<ProductResponse[]>([]);
@@ -175,13 +176,10 @@ export default function Products() {
 
   return (
     <div className="page page-left">
-      <header className="page-header">
-        <div>
-          <h1>Productos</h1>
-          <p>Sesión: {username ?? "—"}</p>
-        </div>
-        <div className="actions">
-          {canManage && (
+      <AppHeader
+        title="Productos"
+        actions={
+          canManage ? (
             <button
               type="button"
               data-testid="create-product-button"
@@ -194,12 +192,9 @@ export default function Products() {
             >
               Crear producto
             </button>
-          )}
-          <button type="button" onClick={logout}>
-            Cerrar sesión
-          </button>
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
 
       <form
         className="filters-bar"
