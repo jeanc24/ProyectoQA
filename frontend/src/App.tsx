@@ -3,6 +3,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Products from "./pages/Products";
 import Dashboard from "./pages/Dashboard";
+import Stock from "./pages/Stock";
 import Unauthorized from "./components/Unauthorized.tsx";
 
 function App() {
@@ -16,6 +17,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole="product:view">
               <Products />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stock"
+          element={
+            <ProtectedRoute requiredRole="stock:view">
+              <Stock />
             </ProtectedRoute>
           }
         />
