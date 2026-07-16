@@ -12,6 +12,7 @@ type Props = {
 export default function AppHeader({ title, subtitle, actions }: Props) {
   const { username, logout, hasRole } = useAuth();
   const canViewProducts = hasRole("product:view");
+  const canViewStock = hasRole("stock:view");
   const canViewDashboard = hasRole("report:view");
 
   return (
@@ -19,9 +20,7 @@ export default function AppHeader({ title, subtitle, actions }: Props) {
       <div className="app-header-top">
         <div>
           <h1>{title}</h1>
-          <p>
-            {subtitle ?? `Sesión: ${username ?? "—"}`}
-          </p>
+          <p>{subtitle ?? `Sesión: ${username ?? "—"}`}</p>
         </div>
         <div className="app-header-actions">
           {actions}
@@ -41,6 +40,17 @@ export default function AppHeader({ title, subtitle, actions }: Props) {
             }
           >
             Productos
+          </NavLink>
+        )}
+        {canViewStock && (
+          <NavLink
+            to="/stock"
+            data-testid="nav-stock"
+            className={({ isActive }) =>
+              isActive ? "app-nav-link active" : "app-nav-link"
+            }
+          >
+            Stock
           </NavLink>
         )}
         {canViewDashboard && (
