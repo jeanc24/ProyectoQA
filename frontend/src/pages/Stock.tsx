@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../auth/AuthContext";
+import { PERMISSIONS } from "../auth/permissions";
 import { ApiError } from "../api/client";
 import { listProducts } from "../api/products";
 import {
@@ -38,8 +39,8 @@ function movementLabel(type: MovementType): string {
 
 export default function Stock() {
   const { hasRole } = useAuth();
-  const canManage = hasRole("stock:manage");
-  const canViewProducts = hasRole("product:view");
+  const canManage = hasRole(PERMISSIONS.stockManage);
+  const canViewProducts = hasRole(PERMISSIONS.productView);
 
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);

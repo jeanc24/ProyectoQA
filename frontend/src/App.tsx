@@ -5,6 +5,7 @@ import Products from "./pages/Products";
 import Dashboard from "./pages/Dashboard";
 import Stock from "./pages/Stock";
 import Unauthorized from "./components/Unauthorized.tsx";
+import { PERMISSIONS } from "./auth/permissions";
 
 function App() {
   return (
@@ -15,7 +16,7 @@ function App() {
         <Route
           path="/products"
           element={
-            <ProtectedRoute requiredRole="product:view">
+            <ProtectedRoute requiredRole={PERMISSIONS.productView}>
               <Products />
             </ProtectedRoute>
           }
@@ -23,7 +24,7 @@ function App() {
         <Route
           path="/stock"
           element={
-            <ProtectedRoute requiredRole="stock:view">
+            <ProtectedRoute requiredRole={PERMISSIONS.stockView}>
               <Stock />
             </ProtectedRoute>
           }
@@ -31,7 +32,7 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute requiredRole="report:view">
+            <ProtectedRoute requiredRole={PERMISSIONS.reportView}>
               <Dashboard />
             </ProtectedRoute>
           }

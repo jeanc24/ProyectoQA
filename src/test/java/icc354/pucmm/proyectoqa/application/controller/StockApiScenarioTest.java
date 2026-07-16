@@ -69,6 +69,13 @@ class StockApiScenarioTest {
     }
 
     @Test
+    void list_withoutStockView_returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/stock/movements")
+                        .with(user("viewer").authorities(new SimpleGrantedAuthority("product:view"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void list_withStockView_returns200() throws Exception {
         when(stockService.findAll(any(), any(), any(), any(), any()))
                 .thenReturn(new PageResponse<>(List.of(sampleMovement()), 0, 20, 1, 1, true, true));
