@@ -259,7 +259,7 @@ Endpoints principales:
 | `POST`   | `/api/v1/products`            | `product:manage` |
 | `PUT`    | `/api/v1/products/{id}`       | `product:manage` |
 | `DELETE` | `/api/v1/products/{id}`       | `product:manage` |
-| `GET`    | `/api/v1/audit/products/{id}` | `product:view`   |
+| `GET`    | `/api/v1/audit/products/{id}` | `audit:view`     |
 
 
 ### Obtener JWT para curl o Swagger
@@ -286,7 +286,7 @@ Sin token → `401`. Con `viewer` en operaciones `product:manage` → `403`.
 ### Auditoría Envers (historial de cambios)
 
 1. Crear o editar un producto como `admin`
-2. `GET /api/v1/audit/products/{id}` con JWT que tenga `product:view`
+2. `GET /api/v1/audit/products/{id}` con JWT que tenga `audit:view` (p. ej. usuario `auditor`)
 3. Respuesta: lista de revisiones del producto (tablas `products_audit`, `revinfo` en Postgres)
 
 ### Observabilidad (métricas y dashboards)
