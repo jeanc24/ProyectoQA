@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { PERMISSIONS } from "../auth/permissions";
 import "../styles/nav.css";
 
 type Props = {
@@ -11,9 +12,9 @@ type Props = {
 
 export default function AppHeader({ title, subtitle, actions }: Props) {
   const { username, logout, hasRole } = useAuth();
-  const canViewProducts = hasRole("product:view");
-  const canViewStock = hasRole("stock:view");
-  const canViewDashboard = hasRole("report:view");
+  const canViewProducts = hasRole(PERMISSIONS.productView);
+  const canViewStock = hasRole(PERMISSIONS.stockView);
+  const canViewDashboard = hasRole(PERMISSIONS.reportView);
 
   return (
     <header className="app-header">

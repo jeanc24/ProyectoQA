@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import AppHeader from "../components/AppHeader";
 import ProductForm from "../components/ProductForm";
+import { PERMISSIONS } from "../auth/permissions";
 import {
   createProduct,
   deleteProduct,
@@ -32,7 +33,7 @@ function toForm(product: ProductResponse): ProductRequest {
 
 export default function Products() {
   const { hasRole } = useAuth();
-  const canManage = hasRole("product:manage");
+  const canManage = hasRole(PERMISSIONS.productManage);
 
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);

@@ -31,7 +31,7 @@ public class AuditController {
     // Function to get the audit history of a product
     @GetMapping("/{id}")
     // PreAuthorize to check if the user has permissions to view the audit history
-    @PreAuthorize("hasAuthority('product:view')")
+    @PreAuthorize("hasAuthority('audit:view')")
     // Operation to document the function
     @Operation(
             summary = "Get product audit history",
@@ -40,6 +40,8 @@ public class AuditController {
     // ApiResponses to document the responses of the function
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Audit history retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Missing audit:view permission"),
             @ApiResponse(responseCode = "404", description = "Product not found")
     })
     // Function to get the audit history of a product
