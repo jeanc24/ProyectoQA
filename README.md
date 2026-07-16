@@ -100,16 +100,35 @@ Credenciales de **consola Keycloak** (administración del IdP, no de la app): `a
 
 ## Usuarios demo
 
-Usuarios de la aplicación importados desde `[keycloak/inventory-realm.json](keycloak/inventory-realm.json)`:
+Usuarios de la aplicación importados desde [`keycloak/inventory-realm.json`](keycloak/inventory-realm.json).  
+Los “roles” de app son **permisos granulares** del cliente `inventory-api` (no un rol único tipo “Administrador”).
 
+### Matriz de permisos (7)
 
-| Usuario  | Contraseña | Permisos (`inventory-api`)       | Qué puede hacer                                                |
-| -------- | ---------- | -------------------------------- | -------------------------------------------------------------- |
-| `admin`  | `admin`    | `product:view`, `product:manage` | Ver listado, crear, editar y eliminar productos                |
-| `viewer` | `viewer`   | `product:view`                   | Solo lectura: ver listado, sin botones de alta/edición/borrado |
+| Permiso | Descripción |
+| ------- | ----------- |
+| `product:view` | Ver productos / categorías |
+| `product:manage` | Crear, editar y eliminar productos |
+| `stock:view` | Ver historial y niveles de stock |
+| `stock:manage` | Registrar entradas, salidas y ajustes |
+| `report:view` | Dashboard y reportes |
+| `audit:view` | Historial de auditoría (Envers) |
+| `user:manage` | Gestión de usuarios (reservado admin) |
 
+### Usuarios
 
-Los permisos se validan en la API (`@PreAuthorize`) y en el frontend (oculta acciones según rol).
+| Usuario | Contraseña | Permisos (`inventory-api`) | Qué puede hacer |
+| ------- | ---------- | -------------------------- | --------------- |
+| `admin` | `admin` | los 7 permisos | Acceso completo |
+| `viewer` | `viewer` | `product:view`, `stock:view` | Solo lectura |
+| `stock-manager` | `stock-manager` | `product:view`, `stock:view`, `stock:manage` | Operar stock + ver productos |
+| `auditor` | `auditor` | `product:view`, `stock:view`, `audit:view` | Lectura + auditoría |
+
+Los permisos se validan en la API (`@PreAuthorize`) y en el frontend (oculta acciones / rutas según rol).
+
+### Refresh de sesión (JWT)
+
+El frontend usa `keycloak-js`. Antes de cada llamada a la API, [`frontend/src/api/client.ts`](frontend/src/api/client.ts) ejecuta `keycloak.updateToken(30)`: si el access token expira en menos de 30 s, se renueva con el refresh token. Si el refresh falla, [`AuthContext`](frontend/src/auth/AuthContext.tsx) cierra sesión y redirige a `/login`.
 
 ---
 
@@ -197,18 +216,19 @@ Busca el escenario que necesites reproducir y sigue los pasos en orden.
 
 Flujo cubierto por E2E: `frontend/e2e/helpers/login.spec.ts`
 
-### Permisos: admin vs viewer
+### Permisos por usuario (smoke UI)
 
 
-| Paso                                                    | `admin` | `viewer` |
-| ------------------------------------------------------- | ------- | -------- |
-| Login en [http://localhost:3000](http://localhost:3000) | ✓       | ✓        |
-| Ver tabla de productos                                  | ✓       | ✓        |
-| Botón "Nuevo producto"                                  | Visible | Oculto   |
-| Editar / eliminar filas                                 | Sí      | No       |
+| Paso | `admin` | `viewer` | `stock-manager` | `auditor` |
+| ---- | ------- | -------- | --------------- | --------- |
+| Login en [http://localhost:3000](http://localhost:3000) | ✓ | ✓ | ✓ | ✓ |
+| Ver productos | ✓ | ✓ | ✓ | ✓ |
+| Crear / editar / eliminar productos | ✓ | ✗ | ✗ | ✗ |
+| Ver `/stock` | ✓ | ✓ | ✓ | ✓ |
+| Registrar movimiento de stock | ✓ | ✗ | ✓ | ✗ |
+| Ver `/dashboard` | ✓ | ✗ | ✗ | ✗ |
 
-
-Para probar `viewer`: cerrar sesión y volver a entrar con `viewer` / `viewer`.
+Para probar otro usuario: cerrar sesión y volver a entrar (p. ej. `viewer` / `viewer`).
 
 ### CRUD de productos (interfaz web)
 
