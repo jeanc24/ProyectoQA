@@ -62,16 +62,38 @@ services:
       - loki
     restart: unless-stopped
 
+  # OBS-03 — Alertmanager
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: inventory-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./infra/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: inventory-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
     ports:
       - "9090:9090"
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
     depends_on:
       api:
         condition: service_healthy
+      alertmanager:
+        condition: service_started
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:11.2.0
@@ -81,6 +103,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_UNIFIED_ALERTING_ENABLED: "true"
     volumes:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
@@ -88,6 +111,7 @@ services:
       - prometheus
       - tempo
       - loki
+      - alertmanager
     restart: unless-stopped
 
   keycloak:
@@ -167,3 +191,4 @@ volumes:
   tempo_data:
   loki_data:
   alloy_data:
+  alertmanager_data:

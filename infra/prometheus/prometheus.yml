@@ -1,10 +1,20 @@
 # Prometheus configuration file
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
+
+# OBS-03 — reglas de alerta
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
 
 # Scrape configs for the inventory-api job
 scrape_configs:
   - job_name: inventory-api # Job name to scrape metrics from the inventory-api service
     metrics_path: /actuator/prometheus # Path to scrape metrics from the inventory-api service
     static_configs:
-      - targets: ['api:8080'] # Target to scrape metrics from the inventory-api service
+      - targets: ["api:8080"] # Target to scrape metrics from the inventory-api service
