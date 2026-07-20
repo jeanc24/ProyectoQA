@@ -67,6 +67,12 @@ services:
       KEYCLOAK_ISSUER_URI: http://localhost:8081/realms/inventory
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/inventory/protocol/openid-connect/certs
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      # OBS-01 OpenTelemetry — OTLP hacia Alloy (servicio que agrega OBS-02).
+      # Mientras alloy no exista, el exporter solo registra warnings; la API arranca igual.
+      OTEL_TRACES_SAMPLING: "1.0"
+      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: ${OTEL_TRACES_ENDPOINT:-http://alloy:4318/v1/traces}
+      OTEL_METRICS_EXPORT_ENABLED: ${OTEL_METRICS_EXPORT_ENABLED:-false}
+      OTEL_METRICS_EXPORT_URL: ${OTEL_METRICS_EXPORT_URL:-http://alloy:4318/v1/metrics}
     depends_on:
       postgres:
         condition: service_healthy

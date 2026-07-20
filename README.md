@@ -306,6 +306,26 @@ docker compose up -d api prometheus grafana
 
 Prometheus scrapea la API cada 15 s (`[infra/prometheus/prometheus.yml](infra/prometheus/prometheus.yml)`).
 
+### OpenTelemetry (trazas + métricas OTLP)
+
+La API está instrumentada con **OpenTelemetry** vía Micrometer (`spring-boot-starter-opentelemetry`):
+
+- **Spans HTTP**: cada request entra como un trace (Micrometer Observation).
+- **Spans JDBC/JPA**: queries y fetch instrumentados con `datasource-micrometer` (propiedad `jdbc.includes`).
+- **Errores**: las excepciones quedan marcadas en el span correspondiente.
+- **Logs correlacionados**: cada línea incluye `[traceId,spanId]` (`logging.pattern.correlation`), listo para Loki (OBS-02).
+
+Export por **OTLP http/protobuf** (puerto 4318). Variables de entorno (ver `docker-compose.yml`):
+
+| Variable | Default | Uso |
+| -------- | ------- | --- |
+| `OTEL_TRACES_SAMPLING` | `1.0` | % de requests muestreados (1.0 = todos) |
+| `MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT` | `http://alloy:4318/v1/traces` | Destino de trazas (Alloy, OBS-02) |
+| `OTEL_METRICS_EXPORT_ENABLED` | `false` | Activa export de métricas por OTLP (Prometheus scrape sigue activo) |
+| `OTEL_METRICS_EXPORT_URL` | `http://alloy:4318/v1/metrics` | Destino de métricas OTLP |
+
+Mientras el collector (Alloy) no esté levantado, el exporter solo registra warnings y la API funciona normal. El scrape clásico de Prometheus en `/actuator/prometheus` no cambia.
+
 ### Pipeline CI (GitHub Actions)
 
 Cada push o PR a `develop` ejecuta build + unit tests + integration tests.

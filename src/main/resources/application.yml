@@ -30,6 +30,31 @@ management:
     web:
       exposure:
         include: health,info,prometheus,metrics
+  # OBS-01 OpenTelemetry
+  tracing:
+    sampling:
+      probability: ${OTEL_TRACES_SAMPLING:1.0} # 100% for the demo; lower in prod
+  opentelemetry:
+    resource-attributes:
+      service.name: inventory-api
+  # Traces export (OTLP http/protobuf): only active when the endpoint is provided,
+  # e.g. MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://alloy:4318/v1/traces
+  # Metrics export via OTLP (Prometheus scrape at /actuator/prometheus stays as-is)
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
+        url: ${OTEL_METRICS_EXPORT_URL:http://localhost:4318/v1/metrics}
+        step: 30s
+
+# JDBC observation spans (datasource-micrometer): query + fetch, skip connection noise
+jdbc:
+  includes: query, fetch
+
+logging:
+  pattern:
+    # traceId/spanId correlation in every log line (used by Loki in OBS-02)
+    correlation: "[%X{traceId:-},%X{spanId:-}] "
 
 springdoc:
   api-docs:
