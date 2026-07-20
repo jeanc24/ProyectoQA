@@ -1,0 +1,84 @@
+# Prometheus recording/alert rules — OBS-03
+groups:
+  - name: inventory-operational
+    interval: 15s
+    rules:
+      # --- Infra / JVM ---
+      - alert: HighProcessCpu
+        expr: process_cpu_usage{job="inventory-api"} > 0.80
+        for: 2m
+        labels:
+          severity: warning
+          service: inventory-api
+        annotations:
+          summary: "CPU alta en inventory-api"
+          description: "process_cpu_usage={{ $value | humanizePercentage }} > 80% durante 2m."
+
+      - alert: HighJvmHeapMemory
+        expr: |
+          (
+            sum(jvm_memory_used_bytes{job="inventory-api", area="heap"})
+            /
+            sum(jvm_memory_max_bytes{job="inventory-api", area="heap"})
+          ) > 0.85
+        for: 2m
+        labels:
+          severity: warning
+          service: inventory-api
+        annotations:
+          summary: "Heap JVM alto en inventory-api"
+          description: "Uso de heap={{ $value | humanizePercentage }} > 85% durante 2m."
+
+      # --- Disponibilidad ---
+      - alert: InventoryApiDown
+        expr: up{job="inventory-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: inventory-api
+        annotations:
+          summary: "inventory-api caído (scrape falló)"
+          description: "Prometheus no puede scrapear api:8080/actuator/prometheus (up=0) por 1m."
+
+      # --- Errores HTTP 5xx ---
+      - alert: HighHttp5xxErrorRate
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{job="inventory-api", status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(http_server_requests_seconds_count{job="inventory-api"}[5m])), 0.001)
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: inventory-api
+        annotations:
+          summary: "Error rate 5xx elevado"
+          description: "Proporción de respuestas 5xx={{ $value | humanizePercentage }} > 5% (ventana 5m)."
+
+      # --- Latencia p95 ---
+      - alert: HighHttpLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_server_requests_seconds_bucket{job="inventory-api"}[5m]))
+          ) > 2
+        for: 3m
+        labels:
+          severity: warning
+          service: inventory-api
+        annotations:
+          summary: "Latencia p95 alta"
+          description: "p95 de http_server_requests={{ $value | humanizeDuration }} > 2s durante 3m."
+
+      # --- Auth / seguridad ---
+      - alert: AuthFailureSpike401
+        expr: |
+          sum(rate(http_server_requests_seconds_count{job="inventory-api", status="401"}[5m])) > 0.2
+        for: 2m
+        labels:
+          severity: warning
+          service: inventory-api
+        annotations:
+          summary: "Spike de fallos de autenticación (401)"
+          description: "Tasa de 401={{ $value | humanize }} req/s > 0.2 durante 2m (posible token inválido o ataque)."

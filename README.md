@@ -19,7 +19,7 @@ Conventional Commits
 | Infra          | Docker Compose                                   |
 | Tests          | JUnit 5, Mockito, Testcontainers, Playwright     |
 | CI             | GitHub Actions, Jenkins                          |
-| Observabilidad | Spring Actuator, Micrometer, OpenTelemetry, Prometheus, Tempo, Loki, Alloy, Grafana |
+| Observabilidad | Spring Actuator, Micrometer, OpenTelemetry, Prometheus, Tempo, Loki, Alloy, Alertmanager, Grafana |
 
 
 ## Índice
@@ -92,6 +92,7 @@ Para detener todo: `docker compose down`
 | **Tempo**      | [http://localhost:3200](http://localhost:3200) | Almacén de trazas (vía Alloy OTLP)                 |
 | **Loki**       | [http://localhost:3100](http://localhost:3100) | Almacén de logs                                    |
 | **Alloy**      | [http://localhost:12345](http://localhost:12345) | Collector OTLP (4317/4318)                       |
+| **Alertmanager** | [http://localhost:9093](http://localhost:9093) | Alertas operacionales (OBS-03)                 |
 | **Jenkins**    | [http://localhost:8082](http://localhost:8082) | Pipeline CI local (opcional)                       |
 
 
@@ -296,7 +297,7 @@ Sin token → `401`. Con `viewer` en operaciones `product:manage` → `403`.
 
 ```bash
 # Stack app + observabilidad (OBS-01/02)
-docker compose up -d --build postgres keycloak api alloy tempo loki prometheus grafana
+docker compose up -d --build postgres keycloak api alloy tempo loki prometheus alertmanager grafana
 ```
 
 | Recurso | URL |
@@ -309,6 +310,7 @@ docker compose up -d --build postgres keycloak api alloy tempo loki prometheus g
 | Loki | [http://localhost:3100](http://localhost:3100) |
 | Alloy UI | [http://localhost:12345](http://localhost:12345) |
 | OTLP HTTP (Alloy) | `http://localhost:4318` |
+| Alertmanager | [http://localhost:9093](http://localhost:9093) |
 
 Prometheus scrapea la API cada 15 s (`[infra/prometheus/prometheus.yml](infra/prometheus/prometheus.yml)`).
 
@@ -350,6 +352,32 @@ En Grafana (datasources provisionados): **Prometheus**, **Tempo** y **Loki**, co
 2. Grafana → Explore → **Tempo**: Search por service `inventory-api` (o `proyecto-qa`).
 3. Grafana → Explore → **Loki**: `{job="inventory-api"}` — busca líneas con `[traceId,spanId]`.
 4. Ya no deberían aparecer `UnknownHostException: alloy` en los logs de la API.
+
+### Alertas (Alertmanager — OBS-03)
+
+Prometheus evalúa reglas en [`infra/prometheus/alerts.yml`](infra/prometheus/alerts.yml) y envía alertas a Alertmanager ([http://localhost:9093](http://localhost:9093)).
+
+| Alerta | Condición | Severidad |
+| ------ | --------- | --------- |
+| `HighProcessCpu` | `process_cpu_usage` > 80% por 2m | warning |
+| `HighJvmHeapMemory` | heap used/max > 85% por 2m | warning |
+| `InventoryApiDown` | `up{job="inventory-api"} == 0` por 1m | critical |
+| `HighHttp5xxErrorRate` | ratio 5xx > 5% (5m) por 2m | critical |
+| `HighHttpLatencyP95` | p95 HTTP > 2s por 3m | warning |
+| `AuthFailureSpike401` | tasa de 401 > 0.2 req/s por 2m | warning |
+
+```bash
+docker compose up -d alertmanager prometheus
+
+# Reglas cargadas
+curl -sf http://localhost:9090/api/v1/rules | python3 -m json.tool | head -40
+
+# Disparar InventoryApiDown (evidencia para el PDF)
+docker compose stop api
+# espera ~1–2 min → http://localhost:9093/#/alerts
+# Prometheus → http://localhost:9090/alerts
+docker compose start api
+```
 
 ### Pipeline CI (GitHub Actions)
 
