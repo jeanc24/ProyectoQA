@@ -71,6 +71,11 @@ dependencies {
     // Grafana and Prometheus metrics
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
+    // OpenTelemetry (OBS-01): traces + metrics via OTLP
+    // Includes micrometer-tracing-bridge-otel, micrometer-registry-otlp and OTLP exporters
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    // JDBC/JPA query spans via Micrometer Observation (2.x targets Spring Boot 4)
+    implementation 'net.ttddyy.observation:datasource-micrometer-spring-boot:2.2.1'
     // Springdoc for API documentation
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
 
