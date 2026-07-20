@@ -16,6 +16,52 @@ services:
       timeout: 5s
       retries: 5
 
+  # OBS-02 — trazas
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: inventory-tempo
+    command: ["-config.file=/etc/tempo.yml"]
+    ports:
+      - "3200:3200"
+    volumes:
+      - ./infra/tempo/tempo.yml:/etc/tempo.yml:ro
+      - tempo_data:/var/tempo
+    restart: unless-stopped
+
+  # OBS-02 — logs
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: inventory-loki
+    command: ["-config.file=/etc/loki/loki.yml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    restart: unless-stopped
+
+  # OBS-02 — collector OTLP (API → Alloy → Tempo/Loki)
+  alloy:
+    image: grafana/alloy:v1.5.1
+    container_name: inventory-alloy
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP (API usa este)
+      - "12345:12345" # Alloy UI
+    volumes:
+      - ./infra/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    depends_on:
+      - tempo
+      - loki
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: inventory-prometheus
@@ -40,6 +86,9 @@ services:
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
+      - tempo
+      - loki
+    restart: unless-stopped
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
@@ -67,8 +116,7 @@ services:
       KEYCLOAK_ISSUER_URI: http://localhost:8081/realms/inventory
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/inventory/protocol/openid-connect/certs
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
-      # OBS-01 OpenTelemetry — OTLP hacia Alloy (servicio que agrega OBS-02).
-      # Mientras alloy no exista, el exporter solo registra warnings; la API arranca igual.
+      # OBS-01/02 OpenTelemetry → Alloy (OTLP HTTP)
       OTEL_TRACES_SAMPLING: "1.0"
       MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: ${OTEL_TRACES_ENDPOINT:-http://alloy:4318/v1/traces}
       OTEL_METRICS_EXPORT_ENABLED: ${OTEL_METRICS_EXPORT_ENABLED:-false}
@@ -77,6 +125,8 @@ services:
       postgres:
         condition: service_healthy
       keycloak:
+        condition: service_started
+      alloy:
         condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
@@ -114,3 +164,6 @@ services:
 volumes:
   postgres_data:
   jenkins_home:
+  tempo_data:
+  loki_data:
+  alloy_data:

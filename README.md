@@ -19,7 +19,7 @@ Conventional Commits
 | Infra          | Docker Compose                                   |
 | Tests          | JUnit 5, Mockito, Testcontainers, Playwright     |
 | CI             | GitHub Actions, Jenkins                          |
-| Observabilidad | Spring Actuator, Micrometer, Prometheus, Grafana |
+| Observabilidad | Spring Actuator, Micrometer, OpenTelemetry, Prometheus, Tempo, Loki, Alloy, Grafana |
 
 
 ## Índice
@@ -89,6 +89,9 @@ Para detener todo: `docker compose down`
 | **PostgreSQL** | `localhost:5433`                               | BD `inventory` (usuario/contraseña: `inventory`)   |
 | **Prometheus** | [http://localhost:9090](http://localhost:9090) | Scraping de métricas de la API                     |
 | **Grafana**    | [http://localhost:3001](http://localhost:3001) | Dashboards (usuario/contraseña: `admin` / `admin`) |
+| **Tempo**      | [http://localhost:3200](http://localhost:3200) | Almacén de trazas (vía Alloy OTLP)                 |
+| **Loki**       | [http://localhost:3100](http://localhost:3100) | Almacén de logs                                    |
+| **Alloy**      | [http://localhost:12345](http://localhost:12345) | Collector OTLP (4317/4318)                       |
 | **Jenkins**    | [http://localhost:8082](http://localhost:8082) | Pipeline CI local (opcional)                       |
 
 
@@ -289,20 +292,23 @@ Sin token → `401`. Con `viewer` en operaciones `product:manage` → `403`.
 2. `GET /api/v1/audit/products/{id}` con JWT que tenga `audit:view` (p. ej. usuario `auditor`)
 3. Respuesta: lista de revisiones del producto (tablas `products_audit`, `revinfo` en Postgres)
 
-### Observabilidad (métricas y dashboards)
+### Observabilidad (métricas, trazas y logs)
 
 ```bash
-docker compose up -d api prometheus grafana
+# Stack app + observabilidad (OBS-01/02)
+docker compose up -d --build postgres keycloak api alloy tempo loki prometheus grafana
 ```
 
-
-| Recurso             | URL                                                                                    |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| Health check        | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)         |
+| Recurso | URL |
+| ------- | --- |
+| Health check | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) |
 | Métricas Prometheus | [http://localhost:8080/actuator/prometheus](http://localhost:8080/actuator/prometheus) |
-| UI Prometheus       | [http://localhost:9090](http://localhost:9090)                                         |
-| Grafana             | [http://localhost:3001](http://localhost:3001) (`admin` / `admin`)                     |
-
+| UI Prometheus | [http://localhost:9090](http://localhost:9090) |
+| Grafana | [http://localhost:3001](http://localhost:3001) (`admin` / `admin`) |
+| Tempo (query) | [http://localhost:3200](http://localhost:3200) |
+| Loki | [http://localhost:3100](http://localhost:3100) |
+| Alloy UI | [http://localhost:12345](http://localhost:12345) |
+| OTLP HTTP (Alloy) | `http://localhost:4318` |
 
 Prometheus scrapea la API cada 15 s (`[infra/prometheus/prometheus.yml](infra/prometheus/prometheus.yml)`).
 
@@ -313,18 +319,37 @@ La API está instrumentada con **OpenTelemetry** vía Micrometer (`spring-boot-s
 - **Spans HTTP**: cada request entra como un trace (Micrometer Observation).
 - **Spans JDBC/JPA**: queries y fetch instrumentados con `datasource-micrometer` (propiedad `jdbc.includes`).
 - **Errores**: las excepciones quedan marcadas en el span correspondiente.
-- **Logs correlacionados**: cada línea incluye `[traceId,spanId]` (`logging.pattern.correlation`), listo para Loki (OBS-02).
+- **Logs correlacionados**: cada línea incluye `[traceId,spanId]` (`logging.pattern.correlation`).
 
-Export por **OTLP http/protobuf** (puerto 4318). Variables de entorno (ver `docker-compose.yml`):
+Export por **OTLP http/protobuf** hacia **Grafana Alloy** (puerto 4318). Alloy reenvía:
+
+- **Trazas → Tempo** (`infra/tempo/tempo.yml`)
+- **Logs → Loki** (`infra/loki/loki.yml`), además scrapea logs Docker de `inventory-api`
+
+Variables de entorno (ver `docker-compose.yml`):
 
 | Variable | Default | Uso |
 | -------- | ------- | --- |
 | `OTEL_TRACES_SAMPLING` | `1.0` | % de requests muestreados (1.0 = todos) |
-| `MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT` | `http://alloy:4318/v1/traces` | Destino de trazas (Alloy, OBS-02) |
+| `MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT` | `http://alloy:4318/v1/traces` | Destino de trazas (Alloy) |
 | `OTEL_METRICS_EXPORT_ENABLED` | `false` | Activa export de métricas por OTLP (Prometheus scrape sigue activo) |
 | `OTEL_METRICS_EXPORT_URL` | `http://alloy:4318/v1/metrics` | Destino de métricas OTLP |
 
-Mientras el collector (Alloy) no esté levantado, el exporter solo registra warnings y la API funciona normal. El scrape clásico de Prometheus en `/actuator/prometheus` no cambia.
+En Grafana (datasources provisionados): **Prometheus**, **Tempo** y **Loki**, con enlace Trace ↔ Log vía `traceId`.
+
+### Cómo verificar trazas y logs
+
+1. Genera tráfico autenticado:
+   ```bash
+   TOKEN=$(curl -s -X POST "http://localhost:8081/realms/inventory/protocol/openid-connect/token" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "grant_type=password&client_id=inventory-api&client_secret=inventory-api-secret&username=admin&password=admin" \
+     | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+   curl -sf -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/products?size=5" >/dev/null
+   ```
+2. Grafana → Explore → **Tempo**: Search por service `inventory-api` (o `proyecto-qa`).
+3. Grafana → Explore → **Loki**: `{job="inventory-api"}` — busca líneas con `[traceId,spanId]`.
+4. Ya no deberían aparecer `UnknownHostException: alloy` en los logs de la API.
 
 ### Pipeline CI (GitHub Actions)
 
