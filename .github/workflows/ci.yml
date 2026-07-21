@@ -36,9 +36,10 @@ jobs:
       - name: Unit tests
         run: ./gradlew test
 
-      # Integration tests
+      # Integration tests (Postgres + Keycloak Testcontainers)
       - name: Integration tests
         run: ./gradlew integrationTest
+        timeout-minutes: 20
 
       # Upload JaCoCo report
       - name: Upload JaCoCo report

@@ -2,3 +2,16 @@ spring:
   datasource:
     username: inventory
     password: inventory
+
+# OBS / OTel: no exportar en tests (sin Alloy)
+management:
+  tracing:
+    enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false
+
+app:
+  keycloak:
+    client-id: inventory-api

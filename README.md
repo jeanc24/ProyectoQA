@@ -442,13 +442,18 @@ Umbral de cobertura: **60 %** en líneas de `icc354.pucmm.proyectoqa.application
 
 ### Tests de integración (backend)
 
-Usan **Testcontainers** con PostgreSQL real. Tag JUnit: `integration`.
+Usan **Testcontainers** (requieren Docker). Tag JUnit: `integration`.
 
 ```bash
 ./gradlew integrationTest
 ```
 
-Clase de referencia: `src/test/java/.../integration/ProductIntegrationTest.java`
+| Tipo | Clase | Qué prueba |
+|------|-------|------------|
+| Persistencia | `ProductIntegrationTest`, `StockIntegrationTest`, … | Flyway, CRUD, stock, reportes, integridad |
+| Seguridad Keycloak (TEST-01) | `KeycloakSecurityIntegrationTest` | Token real JWT → API → 401/403/200 |
+
+`KeycloakSecurityIntegrationTest` levanta Keycloak (`quay.io/keycloak/keycloak:26.0`) importando `keycloak/inventory-realm.json`, activa el perfil `docker` (OAuth2 resource server) y valida permisos granulares con usuarios demo (`viewer`, `admin`, `auditor`). Los demás IT siguen solo con Postgres (perfil `integration`) para no pagar el costo de Keycloak en cada clase.
 
 ### Tests E2E (Playwright)
 
