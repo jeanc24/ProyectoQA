@@ -98,12 +98,14 @@ tasks.named('test') {
 }
 
 tasks.register('integrationTest', Test) {
-    description = 'Runs integration tests (requires Postgres).'
+    description = 'Runs integration tests (Postgres + Keycloak Testcontainers; requires Docker).'
     group = 'verification'
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform {
         includeTags 'integration'
     }
+    // Keycloak image pull + realm import can take several minutes on cold CI
+    timeout = java.time.Duration.ofMinutes(15)
     shouldRunAfter test
 }
