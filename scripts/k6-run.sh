@@ -35,6 +35,36 @@ if [[ "$(uname -s)" == "Linux" ]] && [[ "${K6_USE_HOST_NETWORK:-}" == "1" ]]; th
   KEYCLOAK_URL="${KEYCLOAK_URL/host.docker.internal/localhost}"
 fi
 
+wait_for_api() {
+  local url="$1"
+  local max="${2:-60}"
+  local i
+  bold "Esperando API healthy en $url ..."
+  for i in $(seq 1 "$max"); do
+    if curl -sf "$url/actuator/health" >/dev/null 2>&1; then
+      green "API UP (${i}s)"
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+# Token desde el host con issuer localhost (coincide con KEYCLOAK_ISSUER_URI de la API).
+fetch_host_token() {
+  local kc_url="${KEYCLOAK_TOKEN_URL:-http://localhost:8081}"
+  local user="${K6_USERNAME:-viewer}"
+  local pass="${K6_PASSWORD:-viewer}"
+  curl -sf -X POST "$kc_url/realms/inventory/protocol/openid-connect/token" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "grant_type=password" \
+    -d "client_id=inventory-api" \
+    -d "client_secret=inventory-api-secret" \
+    -d "username=$user" \
+    -d "password=$pass" \
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])"
+}
+
 run_one() {
   local script="$1"
   local name
@@ -42,15 +72,23 @@ run_one() {
   bold "=== k6 ${name} ==="
   echo "BASE_URL=$BASE_URL"
 
-  # Health desde el host (más fiable que desde k6 setup en algunos entornos)
-  local host_health="${BASE_URL/host.docker.internal/localhost}"
-  if ! curl -sf "${host_health}/actuator/health" >/dev/null 2>&1; then
-    # si BASE_URL ya es localhost
-    if ! curl -sf "${BASE_URL}/actuator/health" >/dev/null 2>&1; then
-      red "API no responde. Levanta: docker compose up -d postgres keycloak tempo loki alloy api"
+  # Health desde el host (Docker Desktop: host.docker.internal → localhost)
+  local host_health="${BASE_URL//host.docker.internal/localhost}"
+  if ! wait_for_api "$host_health" 60; then
+    if [[ "$host_health" != "$BASE_URL" ]] && wait_for_api "$BASE_URL" 5; then
+      :
+    else
+      red "API no responde tras ~2 min. Levanta: docker compose up -d postgres keycloak tempo loki alloy api"
       exit 1
     fi
   fi
+
+  bold "Obteniendo JWT (issuer localhost)..."
+  local token
+  token="$(fetch_host_token)" || {
+    red "No se pudo obtener token de Keycloak en localhost:8081"
+    exit 1
+  }
 
   docker run --rm \
     "${DOCKER_EXTRA[@]}" \
@@ -59,6 +97,7 @@ run_one() {
     -e K6_OUT_DIR=docs/final/testing/k6 \
     -e K6_USERNAME="${K6_USERNAME:-viewer}" \
     -e K6_PASSWORD="${K6_PASSWORD:-viewer}" \
+    -e K6_ACCESS_TOKEN="$token" \
     -v "$ROOT:/work" \
     -w /work \
     "$K6_IMAGE" run "tests/k6/${script}"
