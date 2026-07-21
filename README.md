@@ -424,6 +424,7 @@ Detalle del workflow, artefacto JaCoCo y Jenkins local: sección [CI](#ci-github
 | --------------------- | -------------------------------------------------------------- | ----------------------------- |
 | Unitarios (backend)   | `./gradlew test`                                               | JDK 21                        |
 | Integración (backend) | `./gradlew integrationTest`                                    | Docker en ejecución           |
+| Performance (k6)      | `./scripts/k6-run.sh load` / `stress`                          | API :8080 + Docker            |
 | E2E (frontend)        | `cd frontend && npm run test:e2e`                              | Stack Docker + API en `:8080` |
 | Cobertura JaCoCo      | `./gradlew test` → `build/reports/jacoco/test/html/index.html` | —                             |
 
@@ -454,6 +455,21 @@ Usan **Testcontainers** (requieren Docker). Tag JUnit: `integration`.
 | Seguridad Keycloak (TEST-01) | `KeycloakSecurityIntegrationTest` | Token real JWT → API → 401/403/200 |
 
 `KeycloakSecurityIntegrationTest` levanta Keycloak (`quay.io/keycloak/keycloak:26.0`) importando `keycloak/inventory-realm.json`, activa el perfil `docker` (OAuth2 resource server) y valida permisos granulares con usuarios demo (`viewer`, `admin`, `auditor`). Los demás IT siguen solo con Postgres (perfil `integration`) para no pagar el costo de Keycloak en cada clase.
+
+### Performance (TEST-04) — k6 load / stress
+
+Scripts en `tests/k6/`. Reportes en `docs/final/testing/k6/`.
+
+| Escenario | Umbral p95 | Error rate |
+|-----------|------------|------------|
+| Load (`load-products.js`) | &lt; 500 ms | &lt; 1% |
+| Stress (`stress-products.js`) | &lt; 2000 ms | &lt; 5% |
+
+```bash
+docker compose up -d --build postgres keycloak tempo loki alloy api
+./scripts/k6-run.sh load
+./scripts/k6-run.sh stress
+```
 
 ### Tests E2E (Playwright)
 
