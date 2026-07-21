@@ -41,6 +41,11 @@ jobs:
         run: ./gradlew integrationTest
         timeout-minutes: 20
 
+      # OpenAPI contract tests (TEST-02)
+      - name: Contract tests
+        run: ./gradlew contractTest
+        timeout-minutes: 15
+
       # Upload JaCoCo report
       - name: Upload JaCoCo report
         if: always()

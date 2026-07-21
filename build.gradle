@@ -51,6 +51,7 @@ repositories {
 ext {
     set('springdocVersion', '2.8.6')
     set('testcontainersVersion', '1.20.6')
+    set('openapiRequestValidatorVersion', '2.46.1')
 }
 
 dependencies {
@@ -86,13 +87,15 @@ dependencies {
     // Testcontainers for integration testing
     testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
     testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
+    // OpenAPI contract validation (TEST-02)
+    testImplementation "com.atlassian.oai:swagger-request-validator-core:${openapiRequestValidatorVersion}"
     // JUnit platform launcher for test execution
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
     useJUnitPlatform {
-        excludeTags 'integration'
+        excludeTags 'integration', 'contract'
     }
     finalizedBy jacocoTestReport
 }
@@ -107,5 +110,16 @@ tasks.register('integrationTest', Test) {
     }
     // Keycloak image pull + realm import can take several minutes on cold CI
     timeout = java.time.Duration.ofMinutes(15)
+    shouldRunAfter test
+}
+tasks.register('contractTest', Test) {
+    description = 'Runs OpenAPI contract tests (Postgres Testcontainers; requires Docker).'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'contract'
+    }
+    timeout = java.time.Duration.ofMinutes(10)
     shouldRunAfter test
 }

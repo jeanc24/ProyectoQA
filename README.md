@@ -424,6 +424,7 @@ Detalle del workflow, artefacto JaCoCo y Jenkins local: sección [CI](#ci-github
 | --------------------- | -------------------------------------------------------------- | ----------------------------- |
 | Unitarios (backend)   | `./gradlew test`                                               | JDK 21                        |
 | Integración (backend) | `./gradlew integrationTest`                                    | Docker en ejecución           |
+| Contrato OpenAPI      | `./gradlew contractTest` / `./scripts/contract-test.sh`        | Docker en ejecución           |
 | E2E (frontend)        | `cd frontend && npm run test:e2e`                              | Stack Docker + API en `:8080` |
 | Cobertura JaCoCo      | `./gradlew test` → `build/reports/jacoco/test/html/index.html` | —                             |
 
@@ -452,8 +453,17 @@ Usan **Testcontainers** (requieren Docker). Tag JUnit: `integration`.
 |------|-------|------------|
 | Persistencia | `ProductIntegrationTest`, `StockIntegrationTest`, … | Flyway, CRUD, stock, reportes, integridad |
 | Seguridad Keycloak (TEST-01) | `KeycloakSecurityIntegrationTest` | Token real JWT → API → 401/403/200 |
+| Contrato OpenAPI (TEST-02) | `OpenApiContractIntegrationTest` | Respuestas vs `/api-docs` (products, stock, reports, audit) |
 
 `KeycloakSecurityIntegrationTest` levanta Keycloak (`quay.io/keycloak/keycloak:26.0`) importando `keycloak/inventory-realm.json`, activa el perfil `docker` (OAuth2 resource server) y valida permisos granulares con usuarios demo (`viewer`, `admin`, `auditor`). Los demás IT siguen solo con Postgres (perfil `integration`) para no pagar el costo de Keycloak en cada clase.
+
+Contract tests (Atlassian `swagger-request-validator`):
+
+```bash
+./gradlew contractTest
+# o
+./scripts/contract-test.sh
+```
 
 ### Tests E2E (Playwright)
 

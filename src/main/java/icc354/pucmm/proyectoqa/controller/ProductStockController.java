@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/products")
-@Tag(name = "Stock", description = "Product stock history")
+@Tag(name = "ProductStock", description = "Product stock history")
 public class ProductStockController {
 
     private final StockService stockService;
