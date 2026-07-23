@@ -9,6 +9,10 @@ import {
   listProducts,
   updateProduct,
 } from "../api/products";
+import {
+  getProductAuditHistory,
+  type ProductRevision,
+} from "../api/audit";
 import { listCategories, type Category } from "../api/categories";
 import { ApiError } from "../api/client";
 import type { ProductRequest, ProductResponse } from "../types/product";
@@ -31,9 +35,25 @@ function toForm(product: ProductResponse): ProductRequest {
   };
 }
 
+function formatRevisionType(type: string) {
+  const t = type.toUpperCase();
+  if (t === "ADD") return "Alta";
+  if (t === "MOD" || t === "MODIFIED") return "Modificación";
+  if (t === "DEL" || t === "DELETED") return "Baja";
+  return type;
+}
+
+function formatTimestamp(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString();
+}
+
 export default function Products() {
   const { hasRole } = useAuth();
   const canManage = hasRole(PERMISSIONS.productManage);
+  const canAudit = hasRole(PERMISSIONS.auditView);
+  const showActions = canManage || canAudit;
 
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -44,6 +64,12 @@ export default function Products() {
   >([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<ProductResponse | null>(null);
+  const [auditProduct, setAuditProduct] = useState<ProductResponse | null>(
+    null,
+  );
+  const [auditHistory, setAuditHistory] = useState<ProductRevision[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
   // filters / paging / sort (applied to API)
   const [search, setSearch] = useState("");
@@ -172,6 +198,27 @@ export default function Products() {
       await loadProducts();
     } catch (err) {
       handleApiError(err);
+    }
+  }
+
+  async function openAudit(product: ProductResponse) {
+    setShowForm(false);
+    setEditing(null);
+    setAuditProduct(product);
+    setAuditHistory([]);
+    setAuditError(null);
+    setAuditLoading(true);
+    try {
+      const history = await getProductAuditHistory(product.id);
+      setAuditHistory(history);
+    } catch (err) {
+      setAuditError(
+        err instanceof ApiError
+          ? `${err.status}: ${err.message}`
+          : "Error al cargar historial",
+      );
+    } finally {
+      setAuditLoading(false);
     }
   }
 
@@ -307,6 +354,67 @@ export default function Products() {
         </section>
       )}
 
+      {auditProduct && (
+        <section className="card" data-testid="product-audit-panel">
+          <div className="audit-panel-header">
+            <h2>
+              Historial — {auditProduct.name}{" "}
+              <span className="audit-sku">({auditProduct.sku})</span>
+            </h2>
+            <button
+              type="button"
+              data-testid="audit-close"
+              onClick={() => {
+                setAuditProduct(null);
+                setAuditHistory([]);
+                setAuditError(null);
+              }}
+            >
+              Cerrar
+            </button>
+          </div>
+          {auditLoading && <p>Cargando revisiones…</p>}
+          {auditError && (
+            <div className="alert alert-error" role="alert">
+              {auditError}
+            </div>
+          )}
+          {!auditLoading && !auditError && auditHistory.length === 0 && (
+            <p>Sin revisiones registradas.</p>
+          )}
+          {!auditLoading && auditHistory.length > 0 && (
+            <div className="table-wrap">
+              <table className="products-table" data-testid="audit-history-table">
+                <thead>
+                  <tr>
+                    <th>Rev</th>
+                    <th>Tipo</th>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                    <th>Activo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditHistory.map((rev) => (
+                    <tr key={`${rev.productId}-${rev.revision}`}>
+                      <td>{rev.revision}</td>
+                      <td>{formatRevisionType(rev.revisionType)}</td>
+                      <td>{formatTimestamp(rev.timestamp)}</td>
+                      <td>{rev.username ?? "—"}</td>
+                      <td>{rev.price}</td>
+                      <td>{rev.quantity}</td>
+                      <td>{rev.active ? "Sí" : "No"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
       {loading ? (
         <p>Cargando productos...</p>
       ) : (
@@ -363,13 +471,13 @@ export default function Products() {
                   </th>
                   <th>Categoría</th>
                   <th>Activo</th>
-                  {canManage && <th>Acciones</th>}
+                  {showActions && <th>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan={canManage ? 8 : 7}>No hay productos</td>
+                    <td colSpan={showActions ? 8 : 7}>No hay productos</td>
                   </tr>
                 ) : (
                   products.map((product) => (
@@ -398,25 +506,39 @@ export default function Products() {
                       </td>
                       <td>{product.categoryName ?? "—"}</td>
                       <td>{product.active ? "Sí" : "No"}</td>
-                      {canManage && (
+                      {showActions && (
                         <td className="actions">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowForm(false);
-                              setEditing(product);
-                              setError(null);
-                              setFieldErrors([]);
-                            }}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(product)}
-                          >
-                            Eliminar
-                          </button>
+                          {canAudit && (
+                            <button
+                              type="button"
+                              data-testid="audit-history-button"
+                              onClick={() => void openAudit(product)}
+                            >
+                              Historial
+                            </button>
+                          )}
+                          {canManage && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowForm(false);
+                                  setAuditProduct(null);
+                                  setEditing(product);
+                                  setError(null);
+                                  setFieldErrors([]);
+                                }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(product)}
+                              >
+                                Eliminar
+                              </button>
+                            </>
+                          )}
                         </td>
                       )}
                     </tr>
