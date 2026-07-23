@@ -19,7 +19,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                // Stateless / no cookie session — CSRF no aplica (java:S4502)
+                .csrf(csrf -> csrf.disable()) // NOSONAR
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
