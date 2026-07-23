@@ -48,7 +48,7 @@ Verificar que la **matriz de permisos** se refleja en la UI (menú, formularios,
 |---|--------|----------|-----------|-----------|
 | 1 | Login viewer → `/products` | Ve listado; **sin** botones crear/editar/borrar | | `ex02-viewer-products.png` |
 | 2 | Nav: ¿aparece Dashboard? | **No** (falta `report:view`) | | _(misma o)_ `ex02-viewer-nav.png` |
-| 3 | Ir a `/stock` | Historial visible; texto “Solo lectura”; **sin** formulario registrar | | `ex02-viewer-stock-readonly.png` |
+| 3 | Ir a `/stock` | Historial visible; texto “Solo lectura”; **sin** formulario registrar | (ERROR) Acceso denegado en la pagina al entrar como viewer | `ex02-viewer-stock-readonly.png` |
 | 4 | Pegar URL `/dashboard` | Redirección a `/unauthorized` | | `ex02-viewer-unauthorized-dashboard.png` |
 
 ### B — `stock-manager`
@@ -73,24 +73,9 @@ Verificar que la **matriz de permisos** se refleja en la UI (menú, formularios,
 |---|--------|----------|-----------|-----------|
 | 11 | Nav completa + crear producto + movimiento + dashboard | Todo accesible | | `ex02-admin-full-access.png` |
 
-## Notas de sesión
-
-1. 
-2. 
-3. 
 
 ## Bugs / hallazgos de esta sesión
 
 | ID | Severidad | Descripción | Evidencia |
 |----|-----------|-------------|-----------|
-| — | — | _Ninguno_ **o** BUG-EX02-01 … | |
-
-## Evidencias (mínimo)
-
-- [ ] `ex02-viewer-products.png`
-- [ ] `ex02-viewer-stock-readonly.png`
-- [ ] `ex02-viewer-unauthorized-dashboard.png`
-- [ ] `ex02-sm-stock-form.png`
-- [ ] `ex02-sm-unauthorized-dashboard.png`
-- [ ] `ex02-auditor-readonly.png`
-- [ ] `ex02-admin-full-access.png`
+| BUG-EX02-01 | Media | (ERROR) Acceso denegado en la pagina al entrar como viewer | |
