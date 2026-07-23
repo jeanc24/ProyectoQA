@@ -167,25 +167,6 @@
       "clientRoles": {
         "inventory-api": ["product:view", "stock:view", "stock:manage"]
       }
-    },
-    {
-      "username": "auditor",
-      "enabled": true,
-      "email": "auditor@local",
-      "emailVerified": true,
-      "firstName": "Auditor",
-      "lastName": "User",
-      "requiredActions": [],
-      "credentials": [
-        {
-          "type": "password",
-          "value": "auditor",
-          "temporary": false
-        }
-      ],
-      "clientRoles": {
-        "inventory-api": ["product:view", "stock:view", "audit:view"]
-      }
     }
   ]
 }

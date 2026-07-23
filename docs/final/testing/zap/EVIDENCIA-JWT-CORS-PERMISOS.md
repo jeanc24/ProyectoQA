@@ -2,7 +2,7 @@
 
 - **API:** `http://localhost:8080`
 - **Keycloak:** `http://localhost:8081`
-- **Fecha:** 2026-07-23T17:31:19Z
+- **Fecha:** 2026-07-23T22:58:54Z
 
 ## Resultados
 

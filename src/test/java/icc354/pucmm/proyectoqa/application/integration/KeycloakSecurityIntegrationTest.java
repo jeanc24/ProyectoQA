@@ -125,9 +125,9 @@ class KeycloakSecurityIntegrationTest extends AbstractKeycloakIntegrationTest {
     }
 
     @Test
-    void audit_asAuditor_returns200Or404() {
-        // auditor tiene audit:view; 404 si el producto no existe aún es OK (permiso pasó)
-        String token = getAccessToken("auditor", "auditor");
+    void audit_asAdmin_returns200Or404() {
+        // admin tiene audit:view; 404 si el producto no existe aún es OK (permiso pasó)
+        String token = getAccessToken("admin", "admin");
 
         try {
             ResponseEntity<Void> response = restClient().get()

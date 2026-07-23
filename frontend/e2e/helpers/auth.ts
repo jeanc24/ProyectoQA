@@ -4,18 +4,13 @@ const KEYCLOAK_TOKEN_URL =
   "http://localhost:8081/realms/inventory/protocol/openid-connect/token";
 const API_BASE = "http://localhost:8080";
 
-export type DemoUser =
-  | "admin"
-  | "viewer"
-  | "stock-manager"
-  | "auditor";
+export type DemoUser = "admin" | "viewer" | "stock-manager";
 
 /** Usuarios demo del realm Keycloak (password = username). */
 export const DEMO_USERS: Record<DemoUser, { username: string; password: string }> = {
   admin: { username: "admin", password: "admin" },
   viewer: { username: "viewer", password: "viewer" },
   "stock-manager": { username: "stock-manager", password: "stock-manager" },
-  auditor: { username: "auditor", password: "auditor" },
 };
 
 /**

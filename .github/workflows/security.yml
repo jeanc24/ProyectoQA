@@ -74,6 +74,30 @@ jobs:
           docker compose logs --tail=80 api keycloak
           exit 1
 
+      # API puede estar UP mientras Keycloak aún importa el realm → smoke JWT falla con JSON vacío
+      - name: Wait for Keycloak token endpoint
+        run: |
+          TOKEN_URL="http://localhost:8081/realms/inventory/protocol/openid-connect/token"
+          for i in $(seq 1 60); do
+            BODY=$(curl -s -X POST "$TOKEN_URL" \
+              -H "Content-Type: application/x-www-form-urlencoded" \
+              -d "grant_type=password" \
+              -d "client_id=inventory-api" \
+              -d "client_secret=inventory-api-secret" \
+              -d "username=admin" \
+              -d "password=admin" || true)
+            if echo "$BODY" | python3 -c "import sys,json; json.load(sys.stdin)['access_token']" 2>/dev/null; then
+              echo "Keycloak token endpoint UP"
+              exit 0
+            fi
+            echo "waiting Keycloak ($i)..."
+            sleep 5
+          done
+          echo "Keycloak did not issue access_token"
+          docker compose ps
+          docker compose logs --tail=80 keycloak
+          exit 1
+
       - name: Security smoke (JWT / CORS / permisos)
         run: |
           chmod +x scripts/security-smoke.sh

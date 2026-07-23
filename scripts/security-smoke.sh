@@ -21,14 +21,26 @@ red() { printf '\033[0;31m%s\033[0m\n' "$*"; }
 
 get_token() {
   local user="$1" pass="$2"
-  curl -sf -X POST "$KC/realms/$REALM/protocol/openid-connect/token" \
+  local url="$KC/realms/$REALM/protocol/openid-connect/token"
+  local tmp http body token
+  tmp="$(mktemp)"
+  http=$(curl -s -o "$tmp" -w "%{http_code}" -X POST "$url" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "grant_type=password" \
     -d "client_id=$CLIENT_ID" \
     -d "client_secret=$CLIENT_SECRET" \
     -d "username=$user" \
-    -d "password=$pass" \
-    | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])"
+    -d "password=$pass" || echo "000")
+  body="$(cat "$tmp")"
+  rm -f "$tmp"
+  token=$(printf '%s' "$body" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])" 2>/dev/null || true)
+  if [[ -z "$token" ]]; then
+    red "No access_token para $user (HTTP $http) en $url"
+    printf '%s\n' "${body:-(respuesta vacía)}" | head -c 500 >&2
+    echo >&2
+    exit 1
+  fi
+  printf '%s' "$token"
 }
 
 http_code() {
@@ -50,7 +62,6 @@ CODE_HEALTH=$(http_code GET "$API/actuator/health")
 
 TOKEN_VIEWER=$(get_token viewer viewer)
 TOKEN_ADMIN=$(get_token admin admin)
-TOKEN_AUDITOR=$(get_token auditor auditor)
 
 CODE_VIEWER_LIST=$(http_code GET "$API/api/v1/products" -H "Authorization: Bearer $TOKEN_VIEWER")
 CODE_VIEWER_CREATE=$(http_code POST "$API/api/v1/products" \
@@ -61,8 +72,10 @@ CODE_ADMIN_REPORTS=$(http_code GET "$API/api/v1/reports/inventory-summary" \
   -H "Authorization: Bearer $TOKEN_ADMIN")
 CODE_VIEWER_REPORTS=$(http_code GET "$API/api/v1/reports/inventory-summary" \
   -H "Authorization: Bearer $TOKEN_VIEWER")
-CODE_AUDITOR_AUDIT=$(http_code GET "$API/api/v1/audit/products/1" \
-  -H "Authorization: Bearer $TOKEN_AUDITOR")
+CODE_ADMIN_AUDIT=$(http_code GET "$API/api/v1/audit/products/1" \
+  -H "Authorization: Bearer $TOKEN_ADMIN")
+CODE_VIEWER_AUDIT=$(http_code GET "$API/api/v1/audit/products/1" \
+  -H "Authorization: Bearer $TOKEN_VIEWER")
 
 # CORS: origen permitido vs no permitido
 CORS_OK=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "$API/api/v1/products" \
@@ -99,7 +112,8 @@ pass_fail() {
   pass_fail "$([[ "$CODE_VIEWER_CREATE" == "403" ]] && echo 1 || echo 0)" "viewer POST /products → $CODE_VIEWER_CREATE (esperado 403)"
   pass_fail "$([[ "$CODE_ADMIN_REPORTS" == "200" ]] && echo 1 || echo 0)" "admin GET /reports/inventory-summary → $CODE_ADMIN_REPORTS (esperado 200)"
   pass_fail "$([[ "$CODE_VIEWER_REPORTS" == "403" ]] && echo 1 || echo 0)" "viewer GET /reports → $CODE_VIEWER_REPORTS (esperado 403)"
-  pass_fail "$([[ "$CODE_AUDITOR_AUDIT" == "200" || "$CODE_AUDITOR_AUDIT" == "404" ]] && echo 1 || echo 0)" "auditor GET /audit/products/1 → $CODE_AUDITOR_AUDIT (200 o 404 si no existe)"
+  pass_fail "$([[ "$CODE_ADMIN_AUDIT" == "200" || "$CODE_ADMIN_AUDIT" == "404" ]] && echo 1 || echo 0)" "admin GET /audit/products/1 → $CODE_ADMIN_AUDIT (200 o 404 si no existe)"
+  pass_fail "$([[ "$CODE_VIEWER_AUDIT" == "403" ]] && echo 1 || echo 0)" "viewer GET /audit/products/1 → $CODE_VIEWER_AUDIT (esperado 403)"
   pass_fail "$([[ "$CORS_OK" == "200" || "$CORS_OK" == "204" ]] && echo 1 || echo 0)" "CORS preflight Origin localhost:3000 → HTTP $CORS_OK"
   pass_fail "$([[ "$CORS_ALLOW_ORIGIN" == "http://localhost:3000" ]] && echo 1 || echo 0)" "Access-Control-Allow-Origin = \`$CORS_ALLOW_ORIGIN\` (esperado http://localhost:3000)"
   pass_fail "$([[ -z "$CORS_BAD_ORIGIN_HDR" ]] && echo 1 || echo 0)" "Origen evil.example sin Allow-Origin (valor=\`${CORS_BAD_ORIGIN_HDR:-vacío}\`)"
