@@ -3,6 +3,8 @@ plugins {
     id 'jacoco'
     id 'org.springframework.boot' version '4.0.6'
     id 'io.spring.dependency-management' version '1.1.7'
+    // SONAR-01 — SonarCloud / SonarScanner for Gradle
+    id 'org.sonarqube' version '7.3.1.8318'
 }
 
 jacoco {
@@ -108,4 +110,24 @@ tasks.register('integrationTest', Test) {
     // Keycloak image pull + realm import can take several minutes on cold CI
     timeout = java.time.Duration.ofMinutes(15)
     shouldRunAfter test
+}
+// SONAR-01 — SonarCloud (coverage via JaCoCo XML)
+sonar {
+    properties {
+        property 'sonar.projectKey', 'jeanc24_ProyectoQA'
+        property 'sonar.organization', System.getenv('SONAR_ORGANIZATION') ?: 'jeanc24'
+        property 'sonar.host.url', 'https://sonarcloud.io'
+        property 'sonar.projectName', 'ProyectoQA'
+        property 'sonar.coverage.jacoco.xmlReportPaths',
+                "${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml"
+        property 'sonar.java.coveragePlugin', 'jacoco'
+        property 'sonar.exclusions',
+                '**/dto/**,**/generated/**,**/*Application.java'
+        property 'sonar.coverage.exclusions',
+                '**/dto/**,**/config/**,**/*Application.java'
+    }
+}
+
+tasks.named('sonar') {
+    dependsOn jacocoTestReport
 }

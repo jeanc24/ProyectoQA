@@ -36,7 +36,8 @@ public class DockerSecurityConfig {
             Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable())
+                // JWT stateless (sin cookies de sesión) — CSRF no aplica (java:S4502)
+                .csrf(csrf -> csrf.disable()) // NOSONAR
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

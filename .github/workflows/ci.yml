@@ -1,22 +1,20 @@
 name: CI
 
-# Triggers: on push to develop or pull request to develop
 on:
   push:
     branches: [develop]
   pull_request:
     branches: [develop]
 
-# Jobs: build and test
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    # Steps: checkout, setup JDK, grant execute permission, build, test, upload JaCoCo report
     steps:
-      # Checkout the repository
       - uses: actions/checkout@v4
+        with:
+          # SONAR-01: blame / new code detection
+          fetch-depth: 0
 
-      # Set up JDK 21
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -24,27 +22,39 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      # Grant execute permission for gradlew
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Build (without tests)
       - name: Build (sin tests)
         run: ./gradlew build -x test
 
-      # Unit tests
       - name: Unit tests
         run: ./gradlew test
 
-      # Integration tests (Postgres + Keycloak Testcontainers)
       - name: Integration tests
         run: ./gradlew integrationTest
         timeout-minutes: 20
 
-      # Upload JaCoCo report
       - name: Upload JaCoCo report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
           path: build/reports/jacoco/test/
+
+      # SONAR-01 — SonarCloud + quality gate (secret SONAR_TOKEN)
+      - name: SonarCloud analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        run: |
+          if [ -z "${SONAR_TOKEN}" ]; then
+            echo "::warning::SONAR_TOKEN no configurado — se omite SonarCloud. Ver docs/final/quality/SONARCLOUD.md"
+            exit 0
+          fi
+          if [ -z "${SONAR_ORGANIZATION}" ]; then
+            export SONAR_ORGANIZATION=jeanc24
+          fi
+          ./gradlew sonar -Dsonar.qualitygate.wait=true
+        timeout-minutes: 15

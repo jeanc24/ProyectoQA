@@ -4,8 +4,12 @@ Sistema de **Gestión de Inventarios Empresarial** — PUCMM, Aseguramiento de C
 
 Monorepo con API REST (Spring Boot), interfaz web (React), base de datos PostgreSQL, autenticación OAuth2/JWT con Keycloak, auditoría con Hibernate Envers y observabilidad con Prometheus y Grafana.
 
-CI
-Conventional Commits
+[![CI](https://github.com/jeanc24/ProyectoQA/actions/workflows/ci.yml/badge.svg)](https://github.com/jeanc24/ProyectoQA/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jeanc24_ProyectoQA&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jeanc24_ProyectoQA)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jeanc24_ProyectoQA&metric=coverage)](https://sonarcloud.io/summary/new_code?id=jeanc24_ProyectoQA)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jeanc24_ProyectoQA&metric=bugs)](https://sonarcloud.io/summary/new_code?id=jeanc24_ProyectoQA)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=jeanc24_ProyectoQA&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=jeanc24_ProyectoQA)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=jeanc24_ProyectoQA&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=jeanc24_ProyectoQA)
 
 ## Stack
 
@@ -513,6 +517,8 @@ Cada **push** o **pull request** hacia `develop` ejecuta el workflow **[CI](http
 
 Los PR hacia `develop` o `main` también ejecutan **[Conventional Commits](https://github.com/jeanc24/ProyectoQA/actions/workflows/conventional-commits.yml)**.
 
+**SonarCloud (SONAR-01):** tras los tests corre `./gradlew sonar` con JaCoCo y espera el **quality gate** (`sonar.qualitygate.wait=true`). Requiere el secret `SONAR_TOKEN`. Guía: [`docs/final/quality/SONARCLOUD.md`](docs/final/quality/SONARCLOUD.md).
+
 ### Ver el estado del pipeline
 
 1. Pestaña **[Actions](https://github.com/jeanc24/ProyectoQA/actions)** → workflow **CI**
@@ -521,6 +527,7 @@ Los PR hacia `develop` o `main` también ejecutan **[Conventional Commits](https
   - **Build (sin tests)** — `./gradlew build -x test`
   - **Unit tests** — `./gradlew test`
   - **Integration tests** — `./gradlew integrationTest`
+  - **SonarCloud analysis** — quality gate (bugs, vulnerabilities, smells, coverage)
 
 
 | Resultado | Significado                     |
