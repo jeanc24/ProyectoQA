@@ -20,6 +20,7 @@ export const DEMO_USERS: Record<DemoUser, { username: string; password: string }
 
 /**
  * Login por UI vía Keycloak (frontend en :3000).
+ * Landing (/ o /login) → Keycloak → /management → /products.
  */
 export async function loginAs(page: Page, user: DemoUser) {
   const { username, password } = DEMO_USERS[user];
@@ -32,7 +33,8 @@ export async function loginAs(page: Page, user: DemoUser) {
   await page.locator("#password").fill(password);
   await page.locator("#kc-login").click();
 
-  await expect(page).toHaveURL(/\/products$/);
+  // Keycloak returns to /management, which redirects to /products
+  await expect(page).toHaveURL(/\/products$/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Productos" })).toBeVisible();
 }
 
