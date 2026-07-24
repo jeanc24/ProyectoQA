@@ -1,0 +1,22 @@
+# Perfil Spring `staging` (ENV-01). Credenciales y URLs vienen del entorno
+# (docker-compose.staging.yml + .env.staging) — sin secrets en este archivo.
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+          jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI}
+
+app:
+  keycloak:
+    client-id: ${KEYCLOAK_CLIENT_ID:inventory-api}
+
+logging:
+  level:
+    root: INFO
+    icc354.pucmm.proyectoqa: INFO

@@ -5,6 +5,11 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 .env
+.env.staging
+.env.production
+!.env.example
+!.env.staging.example
+!.env.production.example
 
 ### STS ###
 .apt_generated
