@@ -141,6 +141,36 @@ El frontend usa `keycloak-js`. Antes de cada llamada a la API, [`frontend/src/ap
 
 ## Arranque del proyecto
 
+### Staging (ENV-01)
+
+Réplica del stack (Postgres, Keycloak, API, frontend, Tempo/Loki/Alloy, Prometheus, Grafana, Alertmanager) con **perfil Spring `staging`**, puertos distintos al desarrollo local y secretos solo en `.env.staging` (no versionado).
+
+```bash
+cp .env.staging.example .env.staging   # editar passwords
+docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build
+```
+
+| Servicio   | URL (defaults del example)      |
+| ---------- | ------------------------------- |
+| Frontend   | http://localhost:3008           |
+| API        | http://localhost:8088           |
+| Keycloak   | http://localhost:8181           |
+| Grafana    | http://localhost:3011           |
+| Prometheus | http://localhost:9091           |
+
+Health: `curl -sf http://localhost:8088/actuator/health`
+
+Parar / borrar volúmenes staging:
+
+```bash
+docker compose -f docker-compose.staging.yml --env-file .env.staging down
+# con volúmenes:  ... down -v
+```
+
+Archivos: [`docker-compose.staging.yml`](docker-compose.staging.yml), [`.env.staging.example`](.env.staging.example), [`application-staging.yml`](src/main/resources/application-staging.yml).
+
+> Si Keycloak ya tenía el realm importado sin el redirect `http://localhost:3008/*`, recrea el contenedor Keycloak del proyecto `inventory-staging` tras actualizar `keycloak/inventory-realm.json`.
+
 ### Opción A — Stack completo con Docker (recomendado)
 
 Levanta Postgres, Keycloak, API, frontend y (si se incluyen) Prometheus y Grafana:

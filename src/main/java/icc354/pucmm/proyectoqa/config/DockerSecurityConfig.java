@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@Profile("docker")
+@Profile({"docker", "staging"})
 public class DockerSecurityConfig {
 
     @Bean
