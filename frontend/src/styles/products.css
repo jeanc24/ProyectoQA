@@ -114,6 +114,36 @@
   text-align: left;
 }
 
+.audit-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.audit-panel-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.audit-sku {
+  font-weight: 400;
+  color: var(--text);
+  font-size: 0.95em;
+}
+
+.audit-panel-header button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  border-radius: 8px;
+  padding: 8px 14px;
+  flex-shrink: 0;
+}
+
 .product-form .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

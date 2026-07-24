@@ -127,10 +127,9 @@ Los “roles” de app son **permisos granulares** del cliente `inventory-api` (
 
 | Usuario | Contraseña | Permisos (`inventory-api`) | Qué puede hacer |
 | ------- | ---------- | -------------------------- | --------------- |
-| `admin` | `admin` | los 7 permisos | Acceso completo |
+| `admin` | `admin` | los 7 permisos | Acceso completo (incluye historial Envers) |
 | `viewer` | `viewer` | `product:view`, `stock:view` | Solo lectura |
 | `stock-manager` | `stock-manager` | `product:view`, `stock:view`, `stock:manage` | Operar stock + ver productos |
-| `auditor` | `auditor` | `product:view`, `stock:view`, `audit:view` | Lectura + auditoría |
 
 Los permisos se validan en la API (`@PreAuthorize`) y en el frontend (oculta acciones / rutas según rol).
 
@@ -227,14 +226,15 @@ Flujo cubierto por E2E: `frontend/e2e/helpers/login.spec.ts`
 ### Permisos por usuario (smoke UI)
 
 
-| Paso | `admin` | `viewer` | `stock-manager` | `auditor` |
-| ---- | ------- | -------- | --------------- | --------- |
-| Login en [http://localhost:3000](http://localhost:3000) | ✓ | ✓ | ✓ | ✓ |
-| Ver productos | ✓ | ✓ | ✓ | ✓ |
-| Crear / editar / eliminar productos | ✓ | ✗ | ✗ | ✗ |
-| Ver `/stock` | ✓ | ✓ | ✓ | ✓ |
-| Registrar movimiento de stock | ✓ | ✗ | ✓ | ✗ |
-| Ver `/dashboard` | ✓ | ✗ | ✗ | ✗ |
+| Paso | `admin` | `viewer` | `stock-manager` |
+| ---- | ------- | -------- | --------------- |
+| Login en [http://localhost:3000](http://localhost:3000) | ✓ | ✓ | ✓ |
+| Ver productos | ✓ | ✓ | ✓ |
+| Crear / editar / eliminar productos | ✓ | ✗ | ✗ |
+| Historial de auditoría (Envers) | ✓ | ✗ | ✗ |
+| Ver `/stock` | ✓ | ✓ | ✓ |
+| Registrar movimiento de stock | ✓ | ✗ | ✓ |
+| Ver `/dashboard` | ✓ | ✗ | ✗ |
 
 Para probar otro usuario: cerrar sesión y volver a entrar (p. ej. `viewer` / `viewer`).
 
@@ -294,7 +294,7 @@ Sin token → `401`. Con `viewer` en operaciones `product:manage` → `403`.
 ### Auditoría Envers (historial de cambios)
 
 1. Crear o editar un producto como `admin`
-2. `GET /api/v1/audit/products/{id}` con JWT que tenga `audit:view` (p. ej. usuario `auditor`)
+2. `GET /api/v1/audit/products/{id}` con JWT que tenga `audit:view` (usuario `admin`), o botón **Historial** en `/products`
 3. Respuesta: lista de revisiones del producto (tablas `products_audit`, `revinfo` en Postgres)
 
 ### Observabilidad (métricas, trazas y logs)
@@ -429,6 +429,7 @@ Detalle del workflow, artefacto JaCoCo y Jenkins local: sección [CI](#ci-github
 | Unitarios (backend)   | `./gradlew test`                                               | JDK 21                        |
 | Integración (backend) | `./gradlew integrationTest`                                    | Docker en ejecución           |
 | Performance (k6)      | `./scripts/k6-run.sh load` / `stress`                          | API :8080 + Docker            |
+| Seguridad (ZAP + DC)  | `./scripts/zap-baseline.sh` / `./scripts/dependency-check.sh`  | API :8080 (ZAP) / JDK 21 (DC) |
 | E2E (frontend)        | `cd frontend && npm run test:e2e`                              | Stack Docker + API en `:8080` |
 | Cobertura JaCoCo      | `./gradlew test` → `build/reports/jacoco/test/html/index.html` | —                             |
 
@@ -458,7 +459,28 @@ Usan **Testcontainers** (requieren Docker). Tag JUnit: `integration`.
 | Persistencia | `ProductIntegrationTest`, `StockIntegrationTest`, … | Flyway, CRUD, stock, reportes, integridad |
 | Seguridad Keycloak (TEST-01) | `KeycloakSecurityIntegrationTest` | Token real JWT → API → 401/403/200 |
 
-`KeycloakSecurityIntegrationTest` levanta Keycloak (`quay.io/keycloak/keycloak:26.0`) importando `keycloak/inventory-realm.json`, activa el perfil `docker` (OAuth2 resource server) y valida permisos granulares con usuarios demo (`viewer`, `admin`, `auditor`). Los demás IT siguen solo con Postgres (perfil `integration`) para no pagar el costo de Keycloak en cada clase.
+`KeycloakSecurityIntegrationTest` levanta Keycloak (`quay.io/keycloak/keycloak:26.0`) importando `keycloak/inventory-realm.json`, activa el perfil `docker` (OAuth2 resource server) y valida permisos granulares con usuarios demo (`viewer`, `admin`). Los demás IT siguen solo con Postgres (perfil `integration`) para no pagar el costo de Keycloak en cada clase.
+
+### Security testing (TEST-03) — ZAP + Dependency-Check
+
+Workflow dedicado: [`.github/workflows/security.yml`](.github/workflows/security.yml). Reportes en `docs/final/testing/zap/` y `docs/final/testing/dependency-check/`.
+
+```bash
+# 1) API con seguridad real (perfil docker)
+docker compose up -d --build postgres keycloak tempo loki alloy api
+
+# 2) Evidencia JWT / CORS / permisos
+./scripts/security-smoke.sh
+
+# 3) OWASP ZAP baseline → docs/final/testing/zap/zap-report.html
+./scripts/zap-baseline.sh
+
+# 4) OWASP Dependency-Check
+#    Local rápido (si ya hay DB NVD válida): ./scripts/dependency-check.sh
+#    Sync NVD completa (≥10 GB libres / CI):
+#    DEPENDENCY_CHECK_AUTO_UPDATE=true ./scripts/dependency-check.sh
+./scripts/dependency-check.sh
+```
 
 ### Performance (TEST-04) — k6 load / stress
 
@@ -514,6 +536,8 @@ Escenarios automatizados:
 ## CI (GitHub Actions)
 
 Cada **push** o **pull request** hacia `develop` ejecuta el workflow **[CI](https://github.com/jeanc24/ProyectoQA/actions/workflows/ci.yml)**.
+
+También corre **[Security](https://github.com/jeanc24/ProyectoQA/actions/workflows/security.yml)** (ZAP baseline + Dependency-Check). Artefactos: `zap-security-reports`, `dependency-check-report`. Opcional: secreto `NVD_API_KEY` en el repo.
 
 Los PR hacia `develop` o `main` también ejecutan **[Conventional Commits](https://github.com/jeanc24/ProyectoQA/actions/workflows/conventional-commits.yml)**.
 

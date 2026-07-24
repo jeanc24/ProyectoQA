@@ -36,3 +36,12 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Security scan reports (TEST-03) — regenerar con scripts ###
+docs/final/testing/zap/zap-report.html
+docs/final/testing/zap/zap-report.json
+docs/final/testing/zap/zap-warnings.md
+docs/final/testing/zap/zap.yaml
+docs/final/testing/dependency-check/dependency-check-report.html
+docs/final/testing/dependency-check/dependency-check-report.json
+docs/final/testing/dependency-check/dependency-check-junit.xml

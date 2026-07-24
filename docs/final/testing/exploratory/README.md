@@ -1,3 +1,4 @@
+
 # Exploratory testing (TEST-07 / Issue #80)
 
 Sesiones de **testing exploratorio** (Session-Based / charter-driven) sobre el inventario local.

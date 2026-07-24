@@ -13,8 +13,9 @@ test.describe("Permissions by role", () => {
   }) => {
     await loginAs(page, "viewer");
 
-    // Solo lectura en productos: sin botón de crear
+    // Solo lectura en productos: sin crear ni historial de auditoría
     await expect(page.getByTestId("create-product-button")).toHaveCount(0);
+    await expect(page.getByTestId("audit-history-button")).toHaveCount(0);
 
     // Dashboard requiere report:view → Acceso denegado
     await page.goto("/dashboard");
@@ -58,7 +59,7 @@ test.describe("Permissions by role", () => {
     expect(auditRes.status()).toBe(403);
   });
 
-  test("auditor can read product audit history (audit:view)", async ({
+  test("admin can read product audit history (audit:view)", async ({
     request,
   }) => {
     const adminToken = await getAccessToken(request, "admin");
@@ -66,10 +67,9 @@ test.describe("Permissions by role", () => {
       name: `Audit target ${Date.now()}`,
     });
 
-    const auditorToken = await getAccessToken(request, "auditor");
     const auditRes = await request.get(
       `${API_BASE}/api/v1/audit/products/${product.id}`,
-      { headers: { Authorization: `Bearer ${auditorToken}` } },
+      { headers: { Authorization: `Bearer ${adminToken}` } },
     );
 
     expect(auditRes.status()).toBe(200);
@@ -77,17 +77,18 @@ test.describe("Permissions by role", () => {
     expect(revisions.length).toBeGreaterThanOrEqual(1);
   });
 
-  test("auditor UI: can view products/stock, no create product, no dashboard", async ({
-    page,
-  }) => {
-    await loginAs(page, "auditor");
+  test("admin UI shows Historial; viewer does not", async ({ page, request }) => {
+    const adminToken = await getAccessToken(request, "admin");
+    const product = await createProductViaApi(request, adminToken, {
+      name: `Audit UI ${Date.now()}`,
+    });
 
-    await expect(page.getByTestId("nav-products")).toBeVisible();
-    await expect(page.getByTestId("nav-stock")).toBeVisible();
-    await expect(page.getByTestId("nav-dashboard")).toHaveCount(0);
-    await expect(page.getByTestId("create-product-button")).toHaveCount(0);
-
-    await page.goto("/dashboard");
-    await expect(page).toHaveURL(/\/unauthorized$/);
+    await loginAs(page, "admin");
+    await page.getByTestId("products-search").fill(product.name);
+    await page.getByTestId("products-search-button").click();
+    await expect(page.getByTestId("audit-history-button").first()).toBeVisible();
+    await page.getByTestId("audit-history-button").first().click();
+    await expect(page.getByTestId("product-audit-panel")).toBeVisible();
+    await expect(page.getByTestId("audit-history-table")).toBeVisible();
   });
 });
