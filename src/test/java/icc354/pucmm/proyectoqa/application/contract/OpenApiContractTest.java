@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -42,7 +43,7 @@ class OpenApiContractTest {
 
     private static void assertPath(Class<?> controller, String expected) {
         RequestMapping mapping = controller.getAnnotation(RequestMapping.class);
-        assertTrue(mapping != null, controller.getSimpleName() + " missing @RequestMapping");
+        assertNotNull(mapping, controller.getSimpleName() + " missing @RequestMapping");
         boolean match = Arrays.stream(mapping.value()).anyMatch(expected::equals)
                 || Arrays.stream(mapping.path()).anyMatch(expected::equals);
         assertTrue(match, controller.getSimpleName() + " expected mapping " + expected);
