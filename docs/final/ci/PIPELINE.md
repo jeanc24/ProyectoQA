@@ -3,6 +3,8 @@
 Workflow principal: [`.github/workflows/devsecops.yml`](../../../.github/workflows/devsecops.yml)  
 Nombre en Actions: **DevSecOps Pipeline**
 
+Paridad visual en Jenkins (CICD-02): [`JENKINS.md`](./JENKINS.md) / [`infra/jenkins/Jenkinsfile`](../../../infra/jenkins/Jenkinsfile).
+
 Se dispara en **push** / **PR** a `develop` y con `workflow_dispatch`.
 
 ## Stages

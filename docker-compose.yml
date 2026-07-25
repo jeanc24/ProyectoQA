@@ -175,12 +175,17 @@ services:
       - api
 
   jenkins:
-    image: jenkins/jenkins:lts-jdk21
+    # CICD-02 — imagen con Docker CLI, Compose y Node 22 (ver infra/jenkins/Dockerfile)
+    build:
+      context: ./infra/jenkins
+    image: proyectoqa-jenkins:local
     container_name: inventory-jenkins
     user: root
     ports:
       - "8082:8080"
       - "50000:50000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
