@@ -55,8 +55,9 @@ services:
       KEYCLOAK_ISSUER_URI: http://localhost:8081/realms/inventory
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/inventory/protocol/openid-connect/certs
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
-      # Sin Alloy en este stack
-      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: ""
+      # Sin Alloy: desactivar tracing/OTLP (endpoint vacío rompe el arranque)
+      MANAGEMENT_TRACING_ENABLED: "false"
+      MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false"
       OTEL_METRICS_EXPORT_ENABLED: "false"
     depends_on:
       postgres:
