@@ -40,14 +40,6 @@ jobs:
           CORS_ORIGIN=http://localhost:3008 \
           ./scripts/post-deploy-smoke.sh
 
-      - name: Optional Newman collection
-        run: |
-          npx --yes newman@6 run docs/final/ci/post-deploy-smoke.collection.json \
-            --env-var "baseUrl=http://localhost:8088" \
-            --env-var "keycloakUrl=http://localhost:8181" || {
-              echo "::warning::Newman falló o no disponible — smoke bash ya validó la API"
-            }
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -55,11 +47,12 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      # Sonar githubactions:S6505 / S8543 — evitar npx (download on-demand) y scripts de lifecycle
       - name: Install frontend + Playwright
         working-directory: frontend
         run: |
-          npm ci
-          npx playwright install --with-deps chromium
+          npm ci --ignore-scripts
+          ./node_modules/.bin/playwright install --with-deps chromium
 
       - name: E2E against staging
         working-directory: frontend
@@ -68,7 +61,7 @@ jobs:
           API_BASE: http://localhost:8088
           KEYCLOAK_URL: http://localhost:8181
           KEYCLOAK_TOKEN_URL: http://localhost:8181/realms/inventory/protocol/openid-connect/token
-        run: npx playwright test e2e/helpers/login.spec.ts e2e/permissions.spec.ts --project=chromium
+        run: ./node_modules/.bin/playwright test e2e/helpers/login.spec.ts e2e/permissions.spec.ts --project=chromium
 
       - name: Upload post-deploy evidence
         if: always()

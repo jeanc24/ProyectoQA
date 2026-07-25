@@ -15,7 +15,7 @@ flowchart LR
 1. Levantar `docker-compose.staging.yml` + `.env.staging`
 2. `scripts/wait-for-stack.sh` — API `/actuator/health` + token Keycloak (+ frontend)
 3. `scripts/post-deploy-smoke.sh` — JWT / 401 / 403 / CORS (evidencia en este directorio)
-4. Newman (opcional): `docs/final/ci/post-deploy-smoke.collection.json`
+4. Newman (opcional, **local**): `docs/final/ci/post-deploy-smoke.collection.json` — no se usa en CI (Sonar marca `npx` como riesgo)
 5. Playwright contra `http://localhost:3008`
 
 ## Local
