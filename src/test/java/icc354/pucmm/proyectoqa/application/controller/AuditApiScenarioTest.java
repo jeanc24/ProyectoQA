@@ -5,6 +5,7 @@ import icc354.pucmm.proyectoqa.application.service.AuditService;
 import icc354.pucmm.proyectoqa.controller.AuditController;
 import icc354.pucmm.proyectoqa.controller.GlobalExceptionHandler;
 import icc354.pucmm.proyectoqa.domain.exception.ResourceNotFoundException;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -24,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Tag("api")
 @WebMvcTest(AuditController.class)
 @Import({GlobalExceptionHandler.class, ApiTestSecurityConfig.class})
 @ActiveProfiles("api-test")

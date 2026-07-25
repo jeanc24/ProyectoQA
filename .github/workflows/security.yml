@@ -1,11 +1,8 @@
 # TEST-03 — Security scans (OWASP ZAP + Dependency-Check)
 name: Security
 
+# Legacy / manual — security stages viven en DevSecOps Pipeline (CICD-01)
 on:
-  push:
-    branches: [develop]
-  pull_request:
-    branches: [develop]
   workflow_dispatch:
 
 jobs:

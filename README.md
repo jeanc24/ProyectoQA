@@ -4,7 +4,7 @@ Sistema de **Gestión de Inventarios Empresarial** — PUCMM, Aseguramiento de C
 
 Monorepo con API REST (Spring Boot), interfaz web (React), base de datos PostgreSQL, autenticación OAuth2/JWT con Keycloak, auditoría con Hibernate Envers y observabilidad con Prometheus y Grafana.
 
-[![CI](https://github.com/jeanc24/ProyectoQA/actions/workflows/ci.yml/badge.svg)](https://github.com/jeanc24/ProyectoQA/actions/workflows/ci.yml)
+[![DevSecOps](https://github.com/jeanc24/ProyectoQA/actions/workflows/devsecops.yml/badge.svg)](https://github.com/jeanc24/ProyectoQA/actions/workflows/devsecops.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jeanc24_ProyectoQA&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jeanc24_ProyectoQA)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jeanc24_ProyectoQA&metric=coverage)](https://sonarcloud.io/summary/new_code?id=jeanc24_ProyectoQA)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jeanc24_ProyectoQA&metric=bugs)](https://sonarcloud.io/summary/new_code?id=jeanc24_ProyectoQA)
@@ -183,7 +183,7 @@ API_URL=http://localhost:8088 KEYCLOAK_URL=http://localhost:8181 \
 ```
 
 Guía completa: [`docs/final/ci/post-deploy-tests.md`](docs/final/ci/post-deploy-tests.md).  
-CI: workflow `Post-deploy staging` (`.github/workflows/post-deploy-staging.yml`).
+CI: job *Deploy staging · smoke · E2E* en el workflow **DevSecOps Pipeline** (también `workflow_dispatch` en `post-deploy-staging.yml`).
 
 ### Opción A — Stack completo con Docker (recomendado)
 
@@ -429,37 +429,31 @@ docker compose start api
 
 ### Pipeline CI (GitHub Actions)
 
-Cada push o PR a `develop` ejecuta build + unit tests + integration tests.
+Cada push o PR a `develop` ejecuta el **DevSecOps Pipeline** (build → unit → integration → API → contract → Sonar → Docker → security → staging E2E → quality gate). Guía: [`docs/final/ci/PIPELINE.md`](docs/final/ci/PIPELINE.md).
 
-Reproducir localmente los mismos comandos:
+Reproducir localmente los stages de test:
 
 ```powershell
 # Windows
-
-#Build sin tests
 .\gradlew.bat build -x test
-
-#Test unitario
 .\gradlew.bat test
-
-#Test de integracion
 .\gradlew.bat integrationTest
+.\gradlew.bat apiTest
+.\gradlew.bat contractTest
+.\gradlew.bat jacocoTestReport
 ```
 
 ```bash
 # Linux / macOS
-
-#Build sin tests
 ./gradlew build -x test
-
-#Test unitario
 ./gradlew test
-
-#Test de integracion
 ./gradlew integrationTest
+./gradlew apiTest
+./gradlew contractTest
+./gradlew jacocoTestReport
 ```
 
-Detalle del workflow, artefacto JaCoCo y Jenkins local: sección [CI](#ci-github-actions) y `[docs/avance-1/ci/README.md](docs/avance-1/ci/README.md)`.
+Detalle, artefacto JaCoCo y Jenkins local: sección [CI](#ci-github-actions) y [`docs/avance-1/ci/README.md`](docs/avance-1/ci/README.md).
 
 ---
 
@@ -507,7 +501,7 @@ Usan **Testcontainers** (requieren Docker). Tag JUnit: `integration`.
 
 ### Security testing (TEST-03) — ZAP + Dependency-Check
 
-Workflow dedicado: [`.github/workflows/security.yml`](.github/workflows/security.yml). Reportes en `docs/final/testing/zap/` y `docs/final/testing/dependency-check/`.
+En CI: jobs *OWASP Dependency-Check* y *OWASP ZAP baseline* del **DevSecOps Pipeline** (también manual vía [`.github/workflows/security.yml`](.github/workflows/security.yml)). Reportes en `docs/final/testing/zap/` y `docs/final/testing/dependency-check/`.
 
 ```bash
 # 1) API con seguridad real (perfil docker)
@@ -579,29 +573,27 @@ Escenarios automatizados:
 
 ## CI (GitHub Actions)
 
-Cada **push** o **pull request** hacia `develop` ejecuta el workflow **[CI](https://github.com/jeanc24/ProyectoQA/actions/workflows/ci.yml)**.
+Cada **push** o **pull request** hacia `develop` ejecuta **[DevSecOps Pipeline](https://github.com/jeanc24/ProyectoQA/actions/workflows/devsecops.yml)** (CICD-01). Documento: [`docs/final/ci/PIPELINE.md`](docs/final/ci/PIPELINE.md).
 
-También corre **[Security](https://github.com/jeanc24/ProyectoQA/actions/workflows/security.yml)** (ZAP baseline + Dependency-Check). Artefactos: `zap-security-reports`, `dependency-check-report`. Opcional: secreto `NVD_API_KEY` en el repo.
+Incluye: build, unit, integration, API (`apiTest`), contract (`contractTest`), SonarCloud + JaCoCo, Docker build API/frontend, OWASP Dependency-Check + ZAP, deploy staging (compose) + smoke + Playwright E2E, y un job **Quality gate** que falla si cualquier stage falla.
+
+Los workflows `CI`, `Security` y `Post-deploy staging` quedan en **manual** (`workflow_dispatch`) para depurar un trozo. Opcional: secreto `NVD_API_KEY`.
 
 Los PR hacia `develop` o `main` también ejecutan **[Conventional Commits](https://github.com/jeanc24/ProyectoQA/actions/workflows/conventional-commits.yml)**.
 
-**SonarCloud (SONAR-01):** tras los tests corre `./gradlew sonar` con JaCoCo y espera el **quality gate** (`sonar.qualitygate.wait=true`). Requiere el secret `SONAR_TOKEN`. Guía: [`docs/final/quality/SONARCLOUD.md`](docs/final/quality/SONARCLOUD.md).
+**SonarCloud (SONAR-01):** `./gradlew sonar` con JaCoCo y `sonar.qualitygate.wait=true`. Secret `SONAR_TOKEN`. Guía: [`docs/final/quality/SONARCLOUD.md`](docs/final/quality/SONARCLOUD.md).
 
 ### Ver el estado del pipeline
 
-1. Pestaña **[Actions](https://github.com/jeanc24/ProyectoQA/actions)** → workflow **CI**
+1. Pestaña **[Actions](https://github.com/jeanc24/ProyectoQA/actions)** → **DevSecOps Pipeline**
 2. Elegir la ejecución (commit o PR)
-3. Revisar job **build-and-test**:
-  - **Build (sin tests)** — `./gradlew build -x test`
-  - **Unit tests** — `./gradlew test`
-  - **Integration tests** — `./gradlew integrationTest`
-  - **SonarCloud analysis** — quality gate (bugs, vulnerabilities, smells, coverage)
+3. Revisar jobs y el **Quality gate** final
 
 
-| Resultado | Significado                     |
-| --------- | ------------------------------- |
-| Verde     | Build y tests pasaron           |
-| Rojo      | Revisar el log del step fallido |
+| Resultado | Significado                                      |
+| --------- | ------------------------------------------------ |
+| Verde     | Todos los stages + quality gate OK               |
+| Rojo      | Revisar el job/step fallido (tests, security, E2E) |
 
 
 ### Reporte de cobertura (JaCoCo)
