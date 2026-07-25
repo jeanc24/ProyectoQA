@@ -14,7 +14,11 @@ pipeline {
         DOCKER_HOST = 'unix:///var/run/docker.sock'
         TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
         HOST_GATEWAY = 'host.docker.internal'
+        // En el agente Jenkins la DB NVD suele estar vacía. autoUpdate=true tarda
+        // 30–90 min (paridad GHA la hace con cache + NVD_API_KEY). Aquí:
+        // modo rápido + soft-fail → si no hay HTML, no tumba Security; siguen smoke/ZAP.
         DEPENDENCY_CHECK_AUTO_UPDATE = 'false'
+        DEPENDENCY_CHECK_SOFT_FAIL = 'true'
         // Servicios de la app en docker-compose.yml. El cleanup SIEMPRE debe
         // acotarse a esta lista: un 'docker compose down' sin argumentos también
         // apagaría el contenedor jenkins (vive en el mismo compose) y borraría
@@ -70,7 +74,17 @@ pipeline {
             options { timeout(time: 45, unit: 'MINUTES') }
             steps {
                 sh 'chmod +x scripts/dependency-check.sh scripts/security-smoke.sh scripts/zap-baseline.sh'
-                sh './scripts/dependency-check.sh'
+                // NVD_API_KEY opcional (acelera sync); sin ella sigue con soft-fail.
+                script {
+                    try {
+                        withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
+                            sh './scripts/dependency-check.sh'
+                        }
+                    } catch (err) {
+                        echo "Credencial NVD_API_KEY no configurada — DC sin API key: ${err}"
+                        sh './scripts/dependency-check.sh'
+                    }
+                }
                 sh "docker compose up -d --build ${env.APP_SERVICES}"
                 sh """
                   for i in \$(seq 1 60); do

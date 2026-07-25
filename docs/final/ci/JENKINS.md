@@ -56,6 +56,10 @@ docker exec inventory-jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 **Manage Jenkins → Credentials → Add** → Secret text, ID: `SONAR_TOKEN`  
 Sin ella, el stage **Sonar** publica JaCoCo y omite SonarCloud (mismo criterio que GHA sin secret).
 
+### Credencial opcional NVD (Dependency-Check)
+
+Secret text, ID: `NVD_API_KEY`. Sin DB NVD en el agente, Jenkins usa `DEPENDENCY_CHECK_SOFT_FAIL=true` (avisa y sigue con smoke/ZAP). Con API key + `DEPENDENCY_CHECK_AUTO_UPDATE=true` se acerca a la paridad GHA.
+
 ## Crear / actualizar el job
 
 1. **New Item** → `proyectoqa` → **Pipeline**.
