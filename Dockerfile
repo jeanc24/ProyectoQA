@@ -10,7 +10,10 @@ RUN chmod +x gradlew
 
 # Cache de dependencias
 COPY src src
-RUN ./gradlew bootJar -x test --no-daemon
+# Un solo artefacto ejecutable (evita COPY *.jar que mezcla boot + -plain → jar corrupto)
+RUN ./gradlew bootJar -x test --no-daemon \
+  && BOOT_JAR="$(ls build/libs/*.jar | grep -v 'plain' | head -n 1)" \
+  && cp "$BOOT_JAR" /app/application.jar
 
 # RUNTIME
 FROM eclipse-temurin:21-jre-alpine
@@ -19,7 +22,7 @@ RUN apk add --no-cache curl
 
 WORKDIR /app
 
-COPY --from=build /app/build/libs/*.jar app.jar
+COPY --from=build /app/application.jar app.jar
 
 EXPOSE 8080
 

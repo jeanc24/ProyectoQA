@@ -48,6 +48,11 @@ java {
     }
 }
 
+// Evita el JAR "plain" junto al bootJar (rompe Docker COPY *.jar → app.jar corrupto)
+tasks.named('jar') {
+    enabled = false
+}
+
 repositories {
     mavenCentral()
 }
