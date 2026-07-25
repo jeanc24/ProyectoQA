@@ -19,11 +19,9 @@ pipeline {
         // modo rápido + soft-fail → si no hay HTML, no tumba Security; siguen smoke/ZAP.
         DEPENDENCY_CHECK_AUTO_UPDATE = 'false'
         DEPENDENCY_CHECK_SOFT_FAIL = 'true'
-        // Servicios de la app en docker-compose.yml. El cleanup SIEMPRE debe
-        // acotarse a esta lista: un 'docker compose down' sin argumentos también
-        // apagaría el contenedor jenkins (vive en el mismo compose) y borraría
-        // el volumen jenkins_home.
-        APP_SERVICES = 'postgres keycloak tempo loki alloy api'
+        // Security usa docker-compose.security.yml (sin bind mounts).
+        // Staging usa scripts/jenkins-host-compose.sh (reescribe mounts al host).
+        SECURITY_COMPOSE = 'docker-compose.security.yml'
     }
 
     stages {
@@ -85,7 +83,7 @@ pipeline {
                         sh './scripts/dependency-check.sh'
                     }
                 }
-                sh "docker compose up -d --build ${env.APP_SERVICES}"
+                sh "docker compose -f ${env.SECURITY_COMPOSE} up -d --build"
                 sh """
                   for i in \$(seq 1 60); do
                     if curl -sf http://${env.HOST_GATEWAY}:8080/actuator/health >/dev/null; then
@@ -95,7 +93,7 @@ pipeline {
                     echo "waiting API (\$i)..."
                     sleep 5
                   done
-                  docker compose logs --tail=80 api keycloak
+                  docker compose -f ${env.SECURITY_COMPOSE} logs --tail=80 api keycloak
                   exit 1
                 """
                 sh """
@@ -126,7 +124,7 @@ pipeline {
             }
             post {
                 always {
-                    sh "docker compose down -v ${env.APP_SERVICES} || true"
+                    sh "docker compose -f ${env.SECURITY_COMPOSE} down -v || true"
                     archiveArtifacts artifacts: 'docs/final/testing/dependency-check/**', allowEmptyArchive: true
                     archiveArtifacts artifacts: 'docs/final/testing/zap/**', allowEmptyArchive: true
                 }
@@ -176,11 +174,9 @@ pipeline {
             options { timeout(time: 30, unit: 'MINUTES') }
             steps {
                 sh 'cp -f .env.staging.example .env.staging'
-                sh '''
-                  docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build \
-                    postgres keycloak tempo loki alloy api frontend
-                '''
-                sh 'chmod +x scripts/wait-for-stack.sh scripts/post-deploy-smoke.sh'
+                sh 'chmod +x scripts/jenkins-host-compose.sh scripts/wait-for-stack.sh scripts/post-deploy-smoke.sh'
+                // Bind mounts reescritos al path del host (/host-repo)
+                sh './scripts/jenkins-host-compose.sh up -d --build postgres keycloak tempo loki alloy api frontend'
                 sh """
                   API_URL=http://${env.HOST_GATEWAY}:8088 \\
                   KEYCLOAK_URL=http://${env.HOST_GATEWAY}:8181 \\
@@ -215,7 +211,7 @@ pipeline {
             }
             post {
                 always {
-                    sh 'docker compose -f docker-compose.staging.yml --env-file .env.staging down -v || true'
+                    sh './scripts/jenkins-host-compose.sh down -v || true'
                     archiveArtifacts artifacts: 'frontend/test-results/**', allowEmptyArchive: true
                     archiveArtifacts artifacts: 'docs/final/ci/**', allowEmptyArchive: true
                 }
@@ -234,8 +230,8 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed. Check stage logs.'
-            sh "docker compose down -v ${env.APP_SERVICES} || true"
-            sh 'docker compose -f docker-compose.staging.yml --env-file .env.staging down -v || true'
+            sh "docker compose -f ${env.SECURITY_COMPOSE} down -v || true"
+            sh './scripts/jenkins-host-compose.sh down -v || true'
         }
     }
 }

@@ -67,7 +67,13 @@ Secret text, ID: `NVD_API_KEY`. Sin DB NVD en el agente, Jenkins usa `DEPENDENCY
 3. **Script Path:** `infra/jenkins/Jenkinsfile`
 4. **Save** → **Build Now**.
 
-El contenedor monta `/var/run/docker.sock` y `extra_hosts: host.docker.internal`. Los stages Security / Staging / E2E hablan a los puertos publicados en el host vía `host.docker.internal`.
+El contenedor monta `/var/run/docker.sock`, `extra_hosts: host.docker.internal` y el repo en `/host-repo` (para bind mounts de staging).
+
+**Importante:** levantá Jenkins siempre desde la raíz del repo (`docker compose up -d --build jenkins`) para que `.:/host-repo` apunte al código correcto.
+
+### Security sin bind mounts
+
+El stage Security usa [`docker-compose.security.yml`](../../../docker-compose.security.yml) (postgres + keycloak con realm embebido + api). Así se evita el error `not a directory` al montar `./infra/...` desde el workspace de Jenkins.
 
 ## Evidencia (issue #85)
 
