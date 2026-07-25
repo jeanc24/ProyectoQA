@@ -171,6 +171,20 @@ Archivos: [`docker-compose.staging.yml`](docker-compose.staging.yml), [`.env.sta
 
 > Si Keycloak ya tenía el realm importado sin el redirect `http://localhost:3008/*`, recrea el contenedor Keycloak del proyecto `inventory-staging` tras actualizar `keycloak/inventory-realm.json`.
 
+### Post-deploy tests (ENV-02)
+
+Tras levantar staging, validar el sistema **desplegado** (no solo el build):
+
+```bash
+API_URL=http://localhost:8088 KEYCLOAK_URL=http://localhost:8181 FRONTEND_URL=http://localhost:3008 \
+  ./scripts/wait-for-stack.sh
+API_URL=http://localhost:8088 KEYCLOAK_URL=http://localhost:8181 \
+  ./scripts/post-deploy-smoke.sh
+```
+
+Guía completa: [`docs/final/ci/post-deploy-tests.md`](docs/final/ci/post-deploy-tests.md).  
+CI: workflow `Post-deploy staging` (`.github/workflows/post-deploy-staging.yml`).
+
 ### Opción A — Stack completo con Docker (recomendado)
 
 Levanta Postgres, Keycloak, API, frontend y (si se incluyen) Prometheus y Grafana:

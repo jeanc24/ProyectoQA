@@ -1,8 +1,11 @@
-import { APIRequestContext, Page, expect } from "@playwright/test";
+/// <reference types="node" />
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
+const KEYCLOAK_URL = process.env.KEYCLOAK_URL ?? "http://localhost:8081";
 const KEYCLOAK_TOKEN_URL =
-  "http://localhost:8081/realms/inventory/protocol/openid-connect/token";
-const API_BASE = "http://localhost:8080";
+  process.env.KEYCLOAK_TOKEN_URL ??
+  `${KEYCLOAK_URL}/realms/inventory/protocol/openid-connect/token`;
+const API_BASE = process.env.API_BASE ?? "http://localhost:8080";
 
 export type DemoUser = "admin" | "viewer" | "stock-manager";
 
@@ -14,14 +17,15 @@ export const DEMO_USERS: Record<DemoUser, { username: string; password: string }
 };
 
 /**
- * Login por UI vía Keycloak (frontend en :3000).
+ * Login por UI vía Keycloak (frontend en baseURL de Playwright).
  */
 export async function loginAs(page: Page, user: DemoUser) {
   const { username, password } = DEMO_USERS[user];
+  const kcHost = new URL(KEYCLOAK_URL).host;
 
   await page.goto("/login");
   await page.getByTestId("login-button").click();
-  await page.waitForURL(/localhost:8081/);
+  await page.waitForURL(new RegExp(kcHost.replace(/\./g, "\\.")));
 
   await page.locator("#username").fill(username);
   await page.locator("#password").fill(password);
