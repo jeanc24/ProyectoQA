@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { test, expect } from "@playwright/test";
 import {
   createProductViaApi,
@@ -5,7 +6,7 @@ import {
   loginAs,
 } from "./helpers/auth";
 
-const API_BASE = "http://localhost:8080";
+const API_BASE = process.env.API_BASE ?? "http://localhost:8080";
 
 test.describe("Permissions by role", () => {
   test("viewer cannot manage products and is blocked from dashboard", async ({

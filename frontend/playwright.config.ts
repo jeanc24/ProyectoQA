@@ -12,8 +12,8 @@ export default defineConfig({
   // Expectation timeout
   expect: { timeout: 10_000 },
   use: {
-    // Application URL
-    baseURL: "http://localhost:3000",
+    // Application URL (staging: PLAYWRIGHT_BASE_URL=http://localhost:3008)
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
     // Test trace
     trace: "on-first-retry",
     screenshot: "only-on-failure",
