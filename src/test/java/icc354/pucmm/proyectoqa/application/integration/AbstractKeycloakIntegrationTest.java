@@ -66,8 +66,14 @@ public abstract class AbstractKeycloakIntegrationTest extends AbstractIntegratio
         registry.add("app.cors.allowed-origins", () -> "http://localhost:3000");
     }
 
+    /**
+     * Usa {@link GenericContainer#getHost()} (respeta TESTCONTAINERS_HOST_OVERRIDE)
+     * en vez de hardcodear localhost: desde Jenkins-en-Docker, localhost no alcanza
+     * el Keycloak publicado en el daemon del host.
+     */
     protected static String issuerUri() {
-        return "http://localhost:" + KEYCLOAK.getMappedPort(KEYCLOAK_PORT) + "/realms/inventory";
+        return "http://" + KEYCLOAK.getHost() + ":" + KEYCLOAK.getMappedPort(KEYCLOAK_PORT)
+                + "/realms/inventory";
     }
 
     protected static String jwkSetUri() {
