@@ -1,6 +1,6 @@
 # CI — Jenkins (avance 1)
 
-Pipeline declarativo del backend, alineado con [GitHub Actions CI](https://github.com/jeanc24/ProyectoQA/actions/workflows/ci.yml).
+Pipeline declarativo del backend. En GitHub el flujo completo es [DevSecOps Pipeline](https://github.com/jeanc24/ProyectoQA/actions/workflows/devsecops.yml) ([PIPELINE.md](../../final/ci/PIPELINE.md)).
 
 | Stage | Comando | Equivalente GHA |
 |-------|---------|-----------------|
@@ -8,6 +8,7 @@ Pipeline declarativo del backend, alineado con [GitHub Actions CI](https://githu
 | Build | `./gradlew build -x test` | Build (sin tests) |
 | Unit Tests | `./gradlew test` | Unit tests |
 | Integration Tests | `./gradlew integrationTest` | Integration tests |
+| API / Contract | `./gradlew apiTest contractTest` | API + Contract (CICD-01) |
 
 Archivo: [`infra/jenkins/Jenkinsfile`](../../../infra/jenkins/Jenkinsfile)
 

@@ -9,6 +9,7 @@ import icc354.pucmm.proyectoqa.domain.enums.MovementType;
 import icc354.pucmm.proyectoqa.domain.exception.InsufficientStockException;
 import icc354.pucmm.proyectoqa.domain.exception.ResourceNotFoundException;
 import icc354.pucmm.proyectoqa.dto.PageResponse;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -31,6 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Tag("api")
 @WebMvcTest({StockController.class, ProductStockController.class})
 @Import({GlobalExceptionHandler.class, ApiTestSecurityConfig.class})
 @ActiveProfiles("api-test")

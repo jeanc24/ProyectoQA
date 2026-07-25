@@ -1,11 +1,8 @@
 # ENV-02 — Post-deploy tests against staging
 name: Post-deploy staging
 
+# Legacy / manual — staging E2E vive en DevSecOps Pipeline (CICD-01)
 on:
-  pull_request:
-    branches: [develop]
-  push:
-    branches: [develop]
   workflow_dispatch:
 
 jobs:

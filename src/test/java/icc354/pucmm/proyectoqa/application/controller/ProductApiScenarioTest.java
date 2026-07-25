@@ -8,6 +8,7 @@ import icc354.pucmm.proyectoqa.controller.ProductController;
 import icc354.pucmm.proyectoqa.domain.exception.DuplicateSkuException;
 import icc354.pucmm.proyectoqa.domain.exception.ResourceNotFoundException;
 import icc354.pucmm.proyectoqa.dto.PageResponse;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -29,6 +30,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@Tag("api")
 @WebMvcTest(ProductController.class)
 @Import({GlobalExceptionHandler.class, ApiTestSecurityConfig.class})
 @ActiveProfiles("api-test")

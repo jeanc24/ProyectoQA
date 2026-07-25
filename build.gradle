@@ -94,11 +94,33 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// Unit = sin integration / api / contract (stages separados en CICD-01)
 tasks.named('test') {
     useJUnitPlatform {
-        excludeTags 'integration'
+        excludeTags 'integration', 'api', 'contract'
     }
-    finalizedBy jacocoTestReport
+}
+
+tasks.register('apiTest', Test) {
+    description = 'API scenario tests (MockMvc *ApiScenarioTest).'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'api'
+    }
+    shouldRunAfter test
+}
+
+tasks.register('contractTest', Test) {
+    description = 'Contract checks (OpenAPI surface vs controllers / Newman collection).'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'contract'
+    }
+    shouldRunAfter apiTest
 }
 
 tasks.register('integrationTest', Test) {
@@ -111,7 +133,12 @@ tasks.register('integrationTest', Test) {
     }
     // Keycloak image pull + realm import can take several minutes on cold CI
     timeout = java.time.Duration.ofMinutes(15)
-    shouldRunAfter test
+    shouldRunAfter contractTest
+}
+
+tasks.named('jacocoTestReport') {
+    dependsOn test, apiTest
+    executionData.setFrom(fileTree(layout.buildDirectory.dir('jacoco')).include('test.exec', 'apiTest.exec'))
 }
 
 // SONAR-01 — SonarCloud (coverage via JaCoCo XML)
