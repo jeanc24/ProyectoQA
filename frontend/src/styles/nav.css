@@ -1,6 +1,36 @@
 .app-header {
-  margin-bottom: 20px;
+  margin: 18px 0 20px;
   text-align: left;
+}
+
+.app-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.app-brand {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-h);
+  text-decoration: none;
+}
+
+.app-brand:hover {
+  opacity: 0.9;
+}
+
+.app-session-chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: var(--social-bg);
 }
 
 .app-header-top {
@@ -8,57 +38,80 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .app-header h1 {
   margin: 0 0 4px;
-  font-size: 36px;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: var(--text-h);
 }
 
 .app-header p {
   margin: 0;
   color: var(--text);
+  font-size: 14px;
 }
 
 .app-header-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .app-header-actions button {
   font: inherit;
   cursor: pointer;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: transparent;
   color: var(--text-h);
-  border-radius: 8px;
+  border-radius: 999px;
   padding: 8px 14px;
+  font-weight: 600;
+  font-size: 13px;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.app-header-actions button:hover {
+  background: var(--social-bg);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .app-header-actions button:first-child:not(:only-child) {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: #fff;
+  border-color: #fff;
+  color: #0a0a0a;
+}
+
+.app-header-actions button:first-child:not(:only-child):hover {
+  background: #f0f0f0;
 }
 
 .app-nav {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
 }
 
 .app-nav-link {
   text-decoration: none;
   color: var(--text);
-  font-size: 15px;
-  font-weight: 500;
-  padding: 6px 12px;
-  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
   border: 1px solid transparent;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .app-nav-link:hover {
@@ -67,9 +120,9 @@
 }
 
 .app-nav-link.active {
-  color: var(--text-h);
-  border-color: var(--border);
-  background: var(--social-bg);
+  color: #0a0a0a;
+  background: #fff;
+  border-color: #fff;
 }
 
 @media (max-width: 720px) {
@@ -78,6 +131,6 @@
   }
 
   .app-header h1 {
-    font-size: 28px;
+    font-size: 26px;
   }
 }

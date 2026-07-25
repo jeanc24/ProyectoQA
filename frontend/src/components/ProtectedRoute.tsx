@@ -11,7 +11,7 @@ export default function ProtectedRoute({ children, requiredRole }: Props) {
   const { isAuthenticated, hasRole } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (requiredRole && !hasRole(requiredRole)) {

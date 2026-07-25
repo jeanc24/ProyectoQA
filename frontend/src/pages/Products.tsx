@@ -138,7 +138,7 @@ export default function Products() {
 
   function handleApiError(err: unknown) {
     if (err instanceof ApiError) {
-      setError(`${err.status}: ${err.message}`);
+      setError(err.message || `No se pudo completar la operación (${err.status})`);
       setFieldErrors(err.fieldErrors ?? []);
       return;
     }

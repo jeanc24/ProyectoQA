@@ -163,13 +163,15 @@ export default function Stock() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 403) {
-          setError("403: No tienes permiso stock:manage para registrar movimientos");
+          setError(
+            "No tienes permiso para registrar movimientos (falta stock:manage).",
+          );
         } else if (err.status === 400) {
-          setError(`400: ${err.message}`);
+          setError(err.message || "No se pudo registrar el movimiento.");
         } else if (err.status === 404) {
-          setError(`404: ${err.message}`);
+          setError(err.message || "Producto no encontrado.");
         } else {
-          setError(`${err.status}: ${err.message}`);
+          setError(err.message || "Error al registrar el movimiento.");
         }
       } else {
         setError("Error inesperado al registrar el movimiento");
