@@ -604,10 +604,12 @@ Los PR hacia `develop` o `main` también ejecutan **[Conventional Commits](https
 ### CI (Jenkins)
 
 ```bash
+docker compose build jenkins
 docker compose up -d jenkins   # UI en http://localhost:8082
 ```
 
-Instrucciones del job y evidencia: **[docs/avance-1/ci/README.md](docs/avance-1/ci/README.md)**
+Pipeline completo (CICD-02) y paridad con GHA: **[docs/final/ci/JENKINS.md](docs/final/ci/JENKINS.md)**  
+Guía avance 1: **[docs/avance-1/ci/README.md](docs/avance-1/ci/README.md)**
 
 ---
 

@@ -1,16 +1,19 @@
 # CI — Jenkins (avance 1)
 
+> **CICD-02 (entrega final):** pipeline visual completo y paridad con GHA →  
+> **[`docs/final/ci/JENKINS.md`](../../final/ci/JENKINS.md)**  
+> Archivo: [`infra/jenkins/Jenkinsfile`](../../../infra/jenkins/Jenkinsfile)
+
 Pipeline declarativo del backend. En GitHub el flujo completo es [DevSecOps Pipeline](https://github.com/jeanc24/ProyectoQA/actions/workflows/devsecops.yml) ([PIPELINE.md](../../final/ci/PIPELINE.md)).
 
 | Stage | Comando | Equivalente GHA |
 |-------|---------|-----------------|
 | Checkout | `checkout scm` | `actions/checkout@v4` |
 | Build | `./gradlew build -x test` | Build (sin tests) |
-| Unit Tests | `./gradlew test` | Unit tests |
-| Integration Tests | `./gradlew integrationTest` | Integration tests |
-| API / Contract | `./gradlew apiTest contractTest` | API + Contract (CICD-01) |
-
-Archivo: [`infra/jenkins/Jenkinsfile`](../../../infra/jenkins/Jenkinsfile)
+| Unit | `./gradlew test` | Unit tests |
+| Integration | `./gradlew integrationTest` | Integration tests |
+| API | `./gradlew apiTest contractTest` | API + Contract |
+| Security → E2E | Ver [JENKINS.md](../../final/ci/JENKINS.md) | CICD-01 / CICD-02 |
 
 ## Prerrequisitos
 
@@ -22,6 +25,7 @@ Archivo: [`infra/jenkins/Jenkinsfile`](../../../infra/jenkins/Jenkinsfile)
 Desde la raíz del repo:
 
 ```bash
+docker compose build jenkins
 docker compose up -d jenkins
 ```
 
@@ -40,10 +44,11 @@ En el asistente inicial o **Manage Jenkins → Plugins**:
 - **Pipeline**
 - **Git**
 - **JUnit** (publicar resultados de tests)
+- **Credentials Binding** (Sonar opcional)
 
 ## Crear el job
 
-1. **New Item** → nombre `proyectoqa-backend` → tipo **Pipeline** → OK.
+1. **New Item** → nombre `proyectoqa` → tipo **Pipeline** → OK.
 2. En **Pipeline**:
    - **Definition:** Pipeline script from SCM
    - **SCM:** Git
@@ -52,9 +57,9 @@ En el asistente inicial o **Manage Jenkins → Plugins**:
    - **Script Path:** `infra/jenkins/Jenkinsfile`
 3. **Save** → **Build Now**.
 
-El contenedor Jenkins monta `/var/run/docker.sock` para que Testcontainers pueda levantar PostgreSQL durante `integrationTest`.
+El contenedor Jenkins monta `/var/run/docker.sock` para que Testcontainers, Security y Staging usen el daemon del host.
 
-En Jenkins dentro de Docker (Mac), el stage **Integration Tests** define:
+Variables Testcontainers (stage Integration):
 
 - `TESTCONTAINERS_RYUK_DISABLED=true`
 - `DOCKER_HOST=unix:///var/run/docker.sock`
@@ -71,15 +76,7 @@ chmod +x gradlew
 ./gradlew integrationTest
 ```
 
-## Evidencia (issue #29)
+## Evidencia
 
-Tras una ejecución exitosa:
-
-1. Abre el build en Jenkins (número de build visible, stages en verde).
-2. Captura pantalla y guárdala como:
-
-   `docs/avance-1/ci/jenkins-build-1.png`
-
-3. Incluye la imagen en el PR que cierra #29.
-
-Si aún no existe el screenshot, el pipeline y esta guía bastan para implementar; la captura se agrega después del primer **Build Now** en verde.
+- Avance 1 (#29): `docs/avance-1/ci/jenkins-build-5.png`
+- Entrega final (#85 / CICD-02): `docs/final/ci/jenkins-pipeline-green.png` — ver [JENKINS.md](../../final/ci/JENKINS.md)
