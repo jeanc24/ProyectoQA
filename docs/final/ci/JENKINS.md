@@ -27,7 +27,7 @@ GHA corre Security / Docker / Staging en paralelo tras tests; Jenkins los ejecut
 - Docker Desktop (o daemon) en ejecución.
 - Puerto **8082** libre (UI Jenkins).
 - Puertos de staging libres durante el job: **8088**, **8181**, **3008** (y los de observabilidad del compose staging).
-- Durante **Security**, también hacen falta **8080** / **8081** (compose local). Si ya tenés `docker compose up` del stack de desarrollo, bajalo antes del Build Now para evitar conflictos de puerto.
+- **Security** usa puertos **8090** (API) / **8091** (Keycloak) / **5435** (Postgres) y **no** fija `container_name`, así puede coexistir con el stack de desarrollo (`8080`/`8081`/`5433`) y con Jenkins (`8082`).
 
 ## Levantar Jenkins
 
@@ -73,7 +73,7 @@ El contenedor monta `/var/run/docker.sock`, `extra_hosts: host.docker.internal` 
 
 ### Security sin bind mounts
 
-El stage Security usa [`docker-compose.security.yml`](../../../docker-compose.security.yml) (postgres + keycloak con realm embebido + api). Así se evita el error `not a directory` al montar `./infra/...` desde el workspace de Jenkins.
+El stage Security usa [`docker-compose.security.yml`](../../../docker-compose.security.yml) (postgres + keycloak con realm embebido + api). Así se evita el error `not a directory` al montar `./infra/...` desde el workspace de Jenkins, y el `Conflict` de nombres/puertos con `inventory-api` / `inventory-keycloak` del compose de desarrollo.
 
 ## Evidencia (issue #85)
 

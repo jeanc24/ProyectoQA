@@ -6,6 +6,8 @@ pipeline {
         timeout(time: 120, unit: 'MINUTES')
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '10'))
+        // Un solo build a la vez: Security/Staging comparten el daemon del host.
+        disableConcurrentBuilds()
     }
 
     // Testcontainers (Jenkins en Docker) + host gateway + DC rápido en local
@@ -19,9 +21,11 @@ pipeline {
         // modo rápido + soft-fail → si no hay HTML, no tumba Security; siguen smoke/ZAP.
         DEPENDENCY_CHECK_AUTO_UPDATE = 'false'
         DEPENDENCY_CHECK_SOFT_FAIL = 'true'
-        // Security usa docker-compose.security.yml (sin bind mounts).
-        // Staging usa scripts/jenkins-host-compose.sh (reescribe mounts al host).
+        // Security: docker-compose.security.yml (puertos 8090/8091, sin bind mounts).
+        // Staging: scripts/jenkins-host-compose.sh (reescribe mounts al host).
         SECURITY_COMPOSE = 'docker-compose.security.yml'
+        SECURITY_API_PORT = '8090'
+        SECURITY_KEYCLOAK_PORT = '8091'
     }
 
     stages {
@@ -83,10 +87,12 @@ pipeline {
                         sh './scripts/dependency-check.sh'
                     }
                 }
+                // Idempotente: leftovers de un build abortado no deben bloquear.
+                sh "docker compose -f ${env.SECURITY_COMPOSE} down -v || true"
                 sh "docker compose -f ${env.SECURITY_COMPOSE} up -d --build"
                 sh """
                   for i in \$(seq 1 60); do
-                    if curl -sf http://${env.HOST_GATEWAY}:8080/actuator/health >/dev/null; then
+                    if curl -sf http://${env.HOST_GATEWAY}:${env.SECURITY_API_PORT}/actuator/health >/dev/null; then
                       echo "API UP"
                       exit 0
                     fi
@@ -97,7 +103,7 @@ pipeline {
                   exit 1
                 """
                 sh """
-                  TOKEN_URL="http://${env.HOST_GATEWAY}:8081/realms/inventory/protocol/openid-connect/token"
+                  TOKEN_URL="http://${env.HOST_GATEWAY}:${env.SECURITY_KEYCLOAK_PORT}/realms/inventory/protocol/openid-connect/token"
                   for i in \$(seq 1 60); do
                     BODY=\$(curl -s -X POST "\$TOKEN_URL" \\
                       -H "Content-Type: application/x-www-form-urlencoded" \\
@@ -115,12 +121,12 @@ pipeline {
                   exit 1
                 """
                 sh """
-                  API_URL=http://${env.HOST_GATEWAY}:8080 \\
-                  KEYCLOAK_URL=http://${env.HOST_GATEWAY}:8081 \\
+                  API_URL=http://${env.HOST_GATEWAY}:${env.SECURITY_API_PORT} \\
+                  KEYCLOAK_URL=http://${env.HOST_GATEWAY}:${env.SECURITY_KEYCLOAK_PORT} \\
                   ./scripts/security-smoke.sh
                 """
-                // ZAP usa --network host -> target localhost del daemon
-                sh './scripts/zap-baseline.sh http://localhost:8080/swagger-ui.html'
+                // ZAP --network host → localhost del daemon = puerto publicado del security API
+                sh "./scripts/zap-baseline.sh http://localhost:${env.SECURITY_API_PORT}/swagger-ui.html"
             }
             post {
                 always {
@@ -231,6 +237,7 @@ pipeline {
         failure {
             echo 'Pipeline failed. Check stage logs.'
             sh "docker compose -f ${env.SECURITY_COMPOSE} down -v || true"
+            sh 'chmod +x scripts/jenkins-host-compose.sh 2>/dev/null || true'
             sh './scripts/jenkins-host-compose.sh down -v || true'
         }
     }
