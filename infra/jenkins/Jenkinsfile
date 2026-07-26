@@ -176,6 +176,10 @@ pipeline {
         }
 
         // --- 9. Staging (puertos 8088 / 8181 / 3008) + wait + smoke ---
+        //     Todo se mantiene en localhost (paridad GHA): el frontend se compila
+        //     con localhost:8181/8088, el issuer y CORS son localhost. El wait/smoke
+        //     alcanzan el host vía host.docker.internal (curl no necesita contexto
+        //     seguro). El navegador E2E usa localhost mediante un proxy TCP (ver E2E).
         stage('Deploy Staging') {
             options { timeout(time: 30, unit: 'MINUTES') }
             steps {
@@ -200,6 +204,11 @@ pipeline {
         }
 
         // --- 10. Playwright E2E contra staging; teardown en post ---
+        //     El navegador corre dentro del contenedor Jenkins. keycloak-js usa PKCE
+        //     (Web Crypto), disponible solo en contexto seguro (HTTPS o localhost).
+        //     host.docker.internal es inseguro → sin crypto.subtle. Por eso un proxy
+        //     TCP expone localhost:{3008,8181,8088} y reenvía al host; el navegador
+        //     usa localhost (seguro, ya registrado como redirect URI del realm).
         stage('E2E') {
             options { timeout(time: 30, unit: 'MINUTES') }
             steps {
@@ -207,10 +216,14 @@ pipeline {
                     sh 'npm ci --ignore-scripts'
                     sh './node_modules/.bin/playwright install chromium'
                     sh """
-                      PLAYWRIGHT_BASE_URL=http://${env.HOST_GATEWAY}:3008 \\
-                      API_BASE=http://${env.HOST_GATEWAY}:8088 \\
-                      KEYCLOAK_URL=http://${env.HOST_GATEWAY}:8181 \\
-                      KEYCLOAK_TOKEN_URL=http://${env.HOST_GATEWAY}:8181/realms/inventory/protocol/openid-connect/token \\
+                      node ../scripts/jenkins-e2e-portforward.mjs 3008 8181 8088 &
+                      PF_PID=\$!
+                      trap "kill \$PF_PID 2>/dev/null || true" EXIT
+                      sleep 3
+                      PLAYWRIGHT_BASE_URL=http://localhost:3008 \\
+                      API_BASE=http://localhost:8088 \\
+                      KEYCLOAK_URL=http://localhost:8181 \\
+                      KEYCLOAK_TOKEN_URL=http://localhost:8181/realms/inventory/protocol/openid-connect/token \\
                       ./node_modules/.bin/playwright test e2e/helpers/login.spec.ts e2e/permissions.spec.ts --project=chromium
                     """
                 }
