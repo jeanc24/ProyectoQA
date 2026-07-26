@@ -171,6 +171,31 @@ Archivos: [`docker-compose.staging.yml`](docker-compose.staging.yml), [`.env.sta
 
 > Si Keycloak ya tenía el realm importado sin el redirect `http://localhost:3008/*`, recrea el contenedor Keycloak del proyecto `inventory-staging` tras actualizar `keycloak/inventory-realm.json`.
 
+### Production (ENV-03)
+
+Perfil Spring **`prod`** endurecido (sin Swagger, actuator mínimo, logging WARN, sampling OTel 0.1) y compose opcional `docker-compose.prod.yml`. Secretos solo en `.env.production` (gitignored). Comparativa staging vs prod: [`docs/final/ci/ENVIRONMENTS.md`](docs/final/ci/ENVIRONMENTS.md).
+
+```bash
+cp .env.production.example .env.production   # cambiar todos los change-me-*
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+| Servicio | URL (defaults)            |
+| -------- | ------------------------- |
+| Frontend | http://localhost:3009     |
+| API      | http://localhost:8089     |
+| Keycloak | http://localhost:8182     |
+| Grafana  | http://127.0.0.1:3012     |
+
+```bash
+curl -sf http://localhost:8089/actuator/health
+docker compose -f docker-compose.prod.yml --env-file .env.production down
+```
+
+Archivos: [`docker-compose.prod.yml`](docker-compose.prod.yml), [`.env.production.example`](.env.production.example), [`application-prod.yml`](src/main/resources/application-prod.yml).
+
+> Esto es una plantilla **production-like** para demo. Un deploy real exige HTTPS, Keycloak en modo producción y secrets fuera del repo (detalle en `ENVIRONMENTS.md`).
+
 ### Post-deploy tests (ENV-02)
 
 Tras levantar staging, validar el sistema **desplegado** (no solo el build):

@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,16 +25,35 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * JWT resource-server security for docker / staging / prod.
+ * En {@code prod}, Swagger queda fuera de permitAll (springdoc deshabilitado).
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@Profile({"docker", "staging"})
+@Profile({"docker", "staging", "prod"})
 public class DockerSecurityConfig {
 
     @Bean
     SecurityFilterChain dockerSecurityFilterChain(
             HttpSecurity http,
-            Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter) throws Exception {
+            Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter,
+            @Value("${springdoc.swagger-ui.enabled:true}") boolean swaggerUiEnabled) throws Exception {
+
+        List<String> publicPaths = new ArrayList<>(List.of(
+                "/actuator/health",
+                "/actuator/health/**",
+                "/actuator/prometheus"
+        ));
+        if (swaggerUiEnabled) {
+            publicPaths.addAll(List.of(
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/api-docs/**",
+                    "/v3/api-docs/**"
+            ));
+        }
 
         http
                 // JWT stateless (sin cookies de sesión) — CSRF no aplica (java:S4502)
@@ -42,14 +62,7 @@ public class DockerSecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/actuator/health",
-                                "/actuator/prometheus",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/api-docs/**",
-                                "/v3/api-docs/**"
-                        ).permitAll()
+                        .requestMatchers(publicPaths.toArray(String[]::new)).permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -60,7 +73,7 @@ public class DockerSecurityConfig {
     }
 
     @Bean
-    Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter(
+    Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter(
             @Value("${app.keycloak.client-id}") String clientId) {
 
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
