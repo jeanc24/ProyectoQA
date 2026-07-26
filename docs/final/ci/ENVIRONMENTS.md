@@ -14,7 +14,7 @@
 | OTel sampling | 1.0 (demo) | 1.0 | **0.1** por defecto |
 | Puertos host (API/FE/KC) | 8080 / 3000 / 8081 | 8088 / 3008 / 8181 | 8089 / 3009 / 8182 |
 | Postgres publicado | Sí (red) | Sí | **127.0.0.1** only |
-| Seguridad HTTP | `DockerSecurityConfig` | `DockerSecurityConfig` | `ProdSecurityConfig` (sin Swagger público) |
+| Seguridad HTTP | `DockerSecurityConfig` | `DockerSecurityConfig` | `DockerSecurityConfig` (prod: sin Swagger en permitAll) |
 
 ## Staging (ENV-01)
 
