@@ -1,0 +1,47 @@
+# Perfil Spring `prod` (ENV-03). Secrets y URLs solo vía entorno
+# (docker-compose.prod.yml + .env.production) — nunca en este archivo.
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+          jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI}
+
+app:
+  keycloak:
+    client-id: ${KEYCLOAK_CLIENT_ID}
+  cors:
+    allowed-origins: ${CORS_ORIGINS}
+
+# Swagger / OpenAPI deshabilitados en producción
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Actuator mínimo: health (+ prometheus solo si el scrape es red interna)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:health,prometheus}
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: ${OTEL_TRACES_SAMPLING:0.1}
+
+logging:
+  level:
+    root: WARN
+    icc354.pucmm.proyectoqa: INFO
+    org.springframework.security: WARN
