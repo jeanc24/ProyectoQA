@@ -74,7 +74,22 @@ jobs:
           if [ -z "${SONAR_ORGANIZATION}" ]; then
             export SONAR_ORGANIZATION=jeanc24
           fi
-          ./gradlew sonar -Dsonar.qualitygate.wait=true
+          set +e
+          ./gradlew sonar -Dsonar.qualitygate.wait=true 2>&1 | tee sonar-analysis.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          # El plan Free de SonarQube Cloud solo permite datos de la rama main:
+          # el análisis desde CI de develop/PR se rechaza con "Not authorized".
+          # En ese caso el quality gate lo publica Automatic Analysis (check propio
+          # "SonarCloud Code Analysis"), así que no bloqueamos el pipeline.
+          if grep -q "Not authorized or project not found" sonar-analysis.log; then
+            echo "::warning::SonarCloud rechazó el análisis desde CI (plan Free: solo rama main). Quality gate publicado por Automatic Analysis."
+            exit 0
+          fi
+          exit "$status"
         timeout-minutes: 15
 
   docker-images:
