@@ -9,7 +9,7 @@ export default function Unauthorized() {
       <h1>Acceso denegado</h1>
       <p>No tienes permisos para ver esta página.</p>
       <div className="actions">
-        <Link to="/login">Volver al login</Link>
+        <Link to="/">Volver al inicio</Link>
         <button type="button" onClick={logout}>
           Cerrar sesión
         </button>

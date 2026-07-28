@@ -9,6 +9,7 @@ import icc354.pucmm.proyectoqa.domain.enums.MovementType;
 import icc354.pucmm.proyectoqa.domain.exception.InsufficientStockException;
 import icc354.pucmm.proyectoqa.domain.exception.ResourceNotFoundException;
 import icc354.pucmm.proyectoqa.dto.PageResponse;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -31,6 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Tag("api")
 @WebMvcTest({StockController.class, ProductStockController.class})
 @Import({GlobalExceptionHandler.class, ApiTestSecurityConfig.class})
 @ActiveProfiles("api-test")
@@ -66,6 +68,13 @@ class StockApiScenarioTest {
     void list_withoutAuth_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/stock/movements"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void list_withoutStockView_returns403() throws Exception {
+        mockMvc.perform(get("/api/v1/stock/movements")
+                        .with(user("viewer").authorities(new SimpleGrantedAuthority("product:view"))))
+                .andExpect(status().isForbidden());
     }
 
     @Test

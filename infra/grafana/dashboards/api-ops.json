@@ -1,191 +1,179 @@
 {
-    "annotations": {
-      "list": []
-    },
-    "editable": true,
-    "fiscalYearStartMonth": 0,
-    "graphTooltip": 0,
-    "id": null,
-    "links": [],
-    "panels": [
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "Prometheus"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "reqps"
+  "__doc": "Dashboard operativo del avance 1 (legacy). OBS-04 añade infra/app/business/security. Ver README.md.",
+  "annotations": { "list": [] },
+  "description": "Vista rápida del avance: throughput, latencia media, 5xx y heap JVM.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "description": "Requests por segundo (todas las rutas).",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "auto",
+            "spanNulls": false
           },
-          "overrides": []
+          "min": 0,
+          "unit": "reqps"
         },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 0
-        },
-        "id": 1,
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single"
-          }
-        },
-        "targets": [
-          {
-            "expr": "sum(rate(http_server_requests_seconds_count[1m]))",
-            "legendFormat": "requests/s",
-            "refId": "A"
-          }
-        ],
-        "title": "HTTP Requests per Second",
-        "type": "timeseries"
+        "overrides": []
       },
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "Prometheus"
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "mean"],
+          "displayMode": "table",
+          "placement": "bottom"
         },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "s"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 0
-        },
-        "id": 2,
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single"
-          }
-        },
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))",
-            "legendFormat": "p95 latency",
-            "refId": "A"
-          }
-        ],
-        "title": "HTTP Latency p95",
-        "type": "timeseries"
+        "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "Prometheus"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "reqps"
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count[1m]))",
+          "legendFormat": "Requests / s",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP requests / s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "description": "Latencia media (sum/count). No usa _bucket.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "showPoints": "auto",
+            "spanNulls": false
           },
-          "overrides": []
+          "min": 0,
+          "unit": "s"
         },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 8
-        },
-        "id": 3,
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single"
-          }
-        },
-        "targets": [
-          {
-            "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m]))",
-            "legendFormat": "5xx errors/s",
-            "refId": "A"
-          }
-        ],
-        "title": "HTTP 5xx Errors",
-        "type": "timeseries"
+        "overrides": []
       },
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "Prometheus"
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
         },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "unit": "bytes"
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_sum[5m])) / sum(rate(http_server_requests_seconds_count[5m]))",
+          "legendFormat": "Latencia media",
+          "refId": "A"
+        }
+      ],
+      "title": "Latencia media",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "description": "Errores 5xx por segundo.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "auto",
+            "spanNulls": false
           },
-          "overrides": []
+          "min": 0,
+          "unit": "reqps"
         },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 8
-        },
-        "id": 4,
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single"
-          }
-        },
-        "targets": [
+        "overrides": [
           {
-            "expr": "jvm_memory_used_bytes{area=\"heap\"}",
-            "legendFormat": "{{id}}",
-            "refId": "A"
+            "matcher": { "id": "byName", "options": "5xx / s" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
           }
-        ],
-        "title": "JVM Heap Memory",
-        "type": "timeseries"
-      }
-    ],
-    "refresh": "10s",
-    "schemaVersion": 39,
-    "tags": [
-      "inventory",
-      "spring-boot",
-      "observability"
-    ],
-    "templating": {
-      "list": []
+        ]
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) or vector(0)",
+          "legendFormat": "5xx / s",
+          "refId": "A"
+        }
+      ],
+      "title": "Errores HTTP 5xx",
+      "type": "timeseries"
     },
-    "time": {
-      "from": "now-15m",
-      "to": "now"
-    },
-    "timepicker": {},
-    "timezone": "browser",
-    "title": "Inventory API - Operativo",
-    "uid": "inventory-api-ops",
-    "version": 1
-  } 
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "description": "Memoria heap JVM en uso.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "min": 0,
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": ["lastNotNull", "max"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{area=\"heap\"}",
+          "legendFormat": "Heap · {{id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Memoria heap JVM",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["inventory", "spring-boot", "observabilidad", "legacy"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Inventory API — Operativo (avance)",
+  "uid": "inventory-api-ops",
+  "version": 2
+}

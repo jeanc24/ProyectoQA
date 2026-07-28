@@ -1,0 +1,75 @@
+# ENV-02 — Post-deploy tests against staging
+name: Post-deploy staging
+
+# Legacy / manual — staging E2E vive en DevSecOps Pipeline (CICD-01)
+on:
+  workflow_dispatch:
+
+jobs:
+  staging-smoke-e2e:
+    name: Staging deploy + smoke + E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare staging env
+        run: cp .env.staging.example .env.staging
+
+      - name: Start staging stack
+        run: |
+          docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build \
+            postgres keycloak tempo loki alloy api frontend
+
+      - name: Wait for stack
+        run: |
+          chmod +x scripts/wait-for-stack.sh scripts/post-deploy-smoke.sh
+          API_URL=http://localhost:8088 \
+          KEYCLOAK_URL=http://localhost:8181 \
+          FRONTEND_URL=http://localhost:3008 \
+          TIMEOUT_SEC=360 \
+          ./scripts/wait-for-stack.sh
+
+      - name: Post-deploy API smoke
+        run: |
+          API_URL=http://localhost:8088 \
+          KEYCLOAK_URL=http://localhost:8181 \
+          CORS_ORIGIN=http://localhost:3008 \
+          ./scripts/post-deploy-smoke.sh
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Sonar githubactions:S6505 / S8543 — evitar npx (download on-demand) y scripts de lifecycle
+      - name: Install frontend + Playwright
+        working-directory: frontend
+        run: |
+          npm ci --ignore-scripts
+          ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: E2E against staging
+        working-directory: frontend
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3008
+          API_BASE: http://localhost:8088
+          KEYCLOAK_URL: http://localhost:8181
+          KEYCLOAK_TOKEN_URL: http://localhost:8181/realms/inventory/protocol/openid-connect/token
+        run: ./node_modules/.bin/playwright test e2e/helpers/login.spec.ts e2e/permissions.spec.ts --project=chromium
+
+      - name: Upload post-deploy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-deploy-evidence
+          path: |
+            docs/final/ci/
+            frontend/test-results/
+          if-no-files-found: ignore
+
+      - name: Tear down staging
+        if: always()
+        run: docker compose -f docker-compose.staging.yml --env-file .env.staging down -v

@@ -16,16 +16,84 @@ services:
       timeout: 5s
       retries: 5
 
+  # OBS-02 — trazas
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: inventory-tempo
+    command: ["-config.file=/etc/tempo.yml"]
+    ports:
+      - "3200:3200"
+    volumes:
+      - ./infra/tempo/tempo.yml:/etc/tempo.yml:ro
+      - tempo_data:/var/tempo
+    restart: unless-stopped
+
+  # OBS-02 — logs
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: inventory-loki
+    command: ["-config.file=/etc/loki/loki.yml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    restart: unless-stopped
+
+  # OBS-02 — collector OTLP (API → Alloy → Tempo/Loki)
+  alloy:
+    image: grafana/alloy:v1.5.1
+    container_name: inventory-alloy
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP (API usa este)
+      - "12345:12345" # Alloy UI
+    volumes:
+      - ./infra/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    depends_on:
+      - tempo
+      - loki
+    restart: unless-stopped
+
+  # OBS-03 — Alertmanager
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: inventory-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./infra/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: inventory-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
     ports:
       - "9090:9090"
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
     depends_on:
       api:
         condition: service_healthy
+      alertmanager:
+        condition: service_started
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:11.2.0
@@ -35,11 +103,16 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_UNIFIED_ALERTING_ENABLED: "true"
     volumes:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
+      - tempo
+      - loki
+      - alertmanager
+    restart: unless-stopped
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
@@ -67,10 +140,17 @@ services:
       KEYCLOAK_ISSUER_URI: http://localhost:8081/realms/inventory
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/inventory/protocol/openid-connect/certs
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      # OBS-01/02 OpenTelemetry → Alloy (OTLP HTTP)
+      OTEL_TRACES_SAMPLING: "1.0"
+      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: ${OTEL_TRACES_ENDPOINT:-http://alloy:4318/v1/traces}
+      OTEL_METRICS_EXPORT_ENABLED: ${OTEL_METRICS_EXPORT_ENABLED:-false}
+      OTEL_METRICS_EXPORT_URL: ${OTEL_METRICS_EXPORT_URL:-http://alloy:4318/v1/metrics}
     depends_on:
       postgres:
         condition: service_healthy
       keycloak:
+        condition: service_started
+      alloy:
         condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
@@ -95,16 +175,27 @@ services:
       - api
 
   jenkins:
-    image: jenkins/jenkins:lts-jdk21
+    # CICD-02 — imagen con Docker CLI, Compose y Node 22 (ver infra/jenkins/Dockerfile)
+    build:
+      context: ./infra/jenkins
+    image: proyectoqa-jenkins:local
     container_name: inventory-jenkins
     user: root
     ports:
       - "8082:8080"
       - "50000:50000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
+      # Path del repo en el host → bind mounts de compose (staging) desde Jenkins
+      - .:/host-repo:ro
 
 volumes:
   postgres_data:
   jenkins_home:
+  tempo_data:
+  loki_data:
+  alloy_data:
+  alertmanager_data:

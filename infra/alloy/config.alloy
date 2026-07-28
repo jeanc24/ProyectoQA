@@ -1,0 +1,100 @@
+// Grafana Alloy — OBS-02
+// Recibe OTLP (trazas/logs) de inventory-api y reenvía a Tempo + Loki.
+// También scrapea logs Docker del contenedor inventory-api (con [traceId,spanId]).
+
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.default.input]
+    logs   = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+    logs   = [otelcol.exporter.loki.default.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+// Logs del contenedor API (incluye correlation [traceId,spanId] de Spring)
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "10s"
+
+  filter {
+    name   = "name"
+    values = ["inventory-api"]
+  }
+}
+
+discovery.relabel "api" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    target_label = "job"
+    replacement  = "inventory-api"
+  }
+
+  rule {
+    target_label = "service_name"
+    replacement  = "inventory-api"
+  }
+}
+
+loki.source.docker "api" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.api.output
+  labels     = {
+    "job"          = "inventory-api",
+    "service_name" = "inventory-api",
+  }
+  forward_to = [loki.process.api.receiver]
+}
+
+loki.process "api" {
+  forward_to = [loki.write.default.receiver]
+
+  // Extrae nivel si aparece (ERROR, WARN, INFO, DEBUG)
+  stage.regex {
+    expression = `(?P<level>ERROR|WARN|INFO|DEBUG|TRACE)`
+  }
+
+  stage.labels {
+    values = {
+      level = "level",
+    }
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

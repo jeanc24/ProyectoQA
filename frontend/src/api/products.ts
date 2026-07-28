@@ -1,11 +1,33 @@
-import { apiFetch } from "./client"; // Injects the jwt token into the headers to avoid expired tokens using the apiFetch function
+import { apiFetch } from "./client";
 import type { PageResponse, ProductRequest, ProductResponse } from "../types/product";
 
-// to test the pagination of the products use the curl command:
-export function listProducts(page = 0, size = 20) {
-  // Fetches the products from the api
+export type ListProductsParams = {
+  page?: number;
+  size?: number;
+  name?: string;
+  sku?: string;
+  categoryId?: number | null;
+  active?: boolean | null;
+  sort?: string; // e.g. "name,asc" | "price,desc" | "quantity,asc"
+};
+
+function toQuery(params: ListProductsParams): string {
+  const q = new URLSearchParams();
+  q.set("page", String(params.page ?? 0));
+  q.set("size", String(params.size ?? 20));
+
+  if (params.name?.trim()) q.set("name", params.name.trim());
+  if (params.sku?.trim()) q.set("sku", params.sku.trim());
+  if (params.categoryId != null) q.set("categoryId", String(params.categoryId));
+  if (params.active != null) q.set("active", String(params.active));
+  if (params.sort?.trim()) q.set("sort", params.sort.trim());
+
+  return q.toString();
+}
+
+export function listProducts(params: ListProductsParams = {}) {
   return apiFetch<PageResponse<ProductResponse>>(
-    `/api/v1/products?page=${page}&size=${size}`,
+    `/api/v1/products?${toQuery(params)}`,
   );
 }
 

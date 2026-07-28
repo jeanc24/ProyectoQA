@@ -1,19 +1,43 @@
+
 pipeline {
     agent any
 
     options {
-        timeout(time: 30, unit: 'MINUTES')
+        timeout(time: 120, unit: 'MINUTES')
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '10'))
+        // Un solo build a la vez: Security/Staging comparten el daemon del host.
+        disableConcurrentBuilds()
+    }
+
+    // Testcontainers (Jenkins en Docker) + host gateway + DC rápido en local
+    environment {
+        TESTCONTAINERS_RYUK_DISABLED = 'true'
+        DOCKER_HOST = 'unix:///var/run/docker.sock'
+        TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
+        HOST_GATEWAY = 'host.docker.internal'
+        // En el agente Jenkins la DB NVD suele estar vacía. autoUpdate=true tarda
+        // 30–90 min (paridad GHA la hace con cache + NVD_API_KEY). Aquí:
+        // modo rápido + soft-fail → si no hay HTML, no tumba Security; siguen smoke/ZAP.
+        DEPENDENCY_CHECK_AUTO_UPDATE = 'false'
+        DEPENDENCY_CHECK_SOFT_FAIL = 'true'
+        // Security: docker-compose.security.yml (puertos 8090/8091, sin bind mounts).
+        // Staging: scripts/jenkins-host-compose.sh (reescribe mounts al host).
+        SECURITY_COMPOSE = 'docker-compose.security.yml'
+        SECURITY_API_PORT = '8090'
+        SECURITY_KEYCLOAK_PORT = '8091'
     }
 
     stages {
+
+        // --- 1. Código ---
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
+        // --- 2. Compilar sin tests ---
         stage('Build') {
             options { timeout(time: 15, unit: 'MINUTES') }
             steps {
@@ -22,36 +46,212 @@ pipeline {
             }
         }
 
-        stage('Unit Tests') {
+        // --- 3. Unitarios ---
+        stage('Unit') {
             options { timeout(time: 15, unit: 'MINUTES') }
             steps {
                 sh './gradlew test --no-daemon'
             }
         }
 
-        stage('Integration Tests') {
+        // --- 4. Integración (Testcontainers / Postgres) ---
+        stage('Integration') {
             options { timeout(time: 20, unit: 'MINUTES') }
-            environment {
-                TESTCONTAINERS_RYUK_DISABLED = 'true'
-                DOCKER_HOST = 'unix:///var/run/docker.sock'
-                TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
-            }
             steps {
                 sh './gradlew integrationTest --no-daemon'
             }
         }
+
+        // --- 5. API + Contract (mismo stage visual) ---
+        stage('API') {
+            options { timeout(time: 20, unit: 'MINUTES') }
+            steps {
+                sh './gradlew apiTest contractTest --no-daemon'
+            }
+        }
+
+        // --- 6. Security: Dependency-Check + smoke JWT/CORS + ZAP ---
+        //     Stack compose arriba -> checks -> teardown siempre en post
+        stage('Security') {
+            options { timeout(time: 45, unit: 'MINUTES') }
+            steps {
+                sh 'chmod +x scripts/dependency-check.sh scripts/security-smoke.sh scripts/zap-baseline.sh'
+                // NVD_API_KEY opcional (acelera sync); sin ella sigue con soft-fail.
+                script {
+                    try {
+                        withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
+                            sh './scripts/dependency-check.sh'
+                        }
+                    } catch (err) {
+                        echo "Credencial NVD_API_KEY no configurada — DC sin API key: ${err}"
+                        sh './scripts/dependency-check.sh'
+                    }
+                }
+                // Idempotente: leftovers de un build abortado no deben bloquear.
+                sh "docker compose -f ${env.SECURITY_COMPOSE} down -v || true"
+                sh "docker compose -f ${env.SECURITY_COMPOSE} up -d --build"
+                sh """
+                  for i in \$(seq 1 60); do
+                    if curl -sf http://${env.HOST_GATEWAY}:${env.SECURITY_API_PORT}/actuator/health >/dev/null; then
+                      echo "API UP"
+                      exit 0
+                    fi
+                    echo "waiting API (\$i)..."
+                    sleep 5
+                  done
+                  docker compose -f ${env.SECURITY_COMPOSE} logs --tail=80 api keycloak
+                  exit 1
+                """
+                sh """
+                  TOKEN_URL="http://${env.HOST_GATEWAY}:${env.SECURITY_KEYCLOAK_PORT}/realms/inventory/protocol/openid-connect/token"
+                  for i in \$(seq 1 60); do
+                    BODY=\$(curl -s -X POST "\$TOKEN_URL" \\
+                      -H "Content-Type: application/x-www-form-urlencoded" \\
+                      -d "grant_type=password" \\
+                      -d "client_id=inventory-api" \\
+                      -d "client_secret=inventory-api-secret" \\
+                      -d "username=admin" \\
+                      -d "password=admin" || true)
+                    if echo "\$BODY" | grep -q access_token; then
+                      echo "Keycloak UP"
+                      exit 0
+                    fi
+                    sleep 5
+                  done
+                  exit 1
+                """
+                sh """
+                  API_URL=http://${env.HOST_GATEWAY}:${env.SECURITY_API_PORT} \\
+                  KEYCLOAK_URL=http://${env.HOST_GATEWAY}:${env.SECURITY_KEYCLOAK_PORT} \\
+                  ./scripts/security-smoke.sh
+                """
+                // ZAP --network host → localhost del daemon = puerto publicado del security API
+                sh "./scripts/zap-baseline.sh http://localhost:${env.SECURITY_API_PORT}/swagger-ui.html"
+            }
+            post {
+                always {
+                    sh "docker compose -f ${env.SECURITY_COMPOSE} down -v || true"
+                    archiveArtifacts artifacts: 'docs/final/testing/dependency-check/**', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'docs/final/testing/zap/**', allowEmptyArchive: true
+                }
+            }
+        }
+
+        // --- 7. JaCoCo + SonarCloud (skip si no hay credencial SONAR_TOKEN) ---
+        stage('Sonar') {
+            options { timeout(time: 20, unit: 'MINUTES') }
+            steps {
+                sh './gradlew jacocoTestReport --no-daemon'
+                script {
+                    try {
+                        withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
+                            if (env.SONAR_TOKEN?.trim()) {
+                                withEnv(["SONAR_ORGANIZATION=${env.SONAR_ORGANIZATION ?: 'jeanc24'}"]) {
+                                    sh './gradlew sonar -Dsonar.qualitygate.wait=true --no-daemon'
+                                }
+                            } else {
+                                echo 'SONAR_TOKEN vacío — skip SonarCloud'
+                            }
+                        }
+                    } catch (err) {
+                        echo "Credencial SONAR_TOKEN no configurada — se omite SonarCloud (paridad GHA): ${err}"
+                    }
+                }
+            }
+        }
+
+        // --- 8. Imágenes API + frontend (build local, sin push) ---
+        stage('Docker Build') {
+            options { timeout(time: 25, unit: 'MINUTES') }
+            steps {
+                sh 'docker build -t proyectoqa-api:ci .'
+                sh '''
+                  docker build -t proyectoqa-frontend:ci ./frontend \
+                    --build-arg VITE_API_URL=http://localhost:8080 \
+                    --build-arg VITE_KEYCLOAK_URL=http://localhost:8081 \
+                    --build-arg VITE_KEYCLOAK_REALM=inventory \
+                    --build-arg VITE_KEYCLOAK_CLIENT_ID=inventory-frontend
+                '''
+            }
+        }
+
+        // --- 9. Staging (puertos 8088 / 8181 / 3008) + wait + smoke ---
+        //     Todo se mantiene en localhost (paridad GHA): el frontend se compila
+        //     con localhost:8181/8088, el issuer y CORS son localhost. El wait/smoke
+        //     alcanzan el host vía host.docker.internal (curl no necesita contexto
+        //     seguro). El navegador E2E usa localhost mediante un proxy TCP (ver E2E).
+        stage('Deploy Staging') {
+            options { timeout(time: 30, unit: 'MINUTES') }
+            steps {
+                sh 'cp -f .env.staging.example .env.staging'
+                sh 'chmod +x scripts/jenkins-host-compose.sh scripts/wait-for-stack.sh scripts/post-deploy-smoke.sh'
+                // Bind mounts reescritos al path del host (/host-repo)
+                sh './scripts/jenkins-host-compose.sh up -d --build postgres keycloak tempo loki alloy api frontend'
+                sh """
+                  API_URL=http://${env.HOST_GATEWAY}:8088 \\
+                  KEYCLOAK_URL=http://${env.HOST_GATEWAY}:8181 \\
+                  FRONTEND_URL=http://${env.HOST_GATEWAY}:3008 \\
+                  TIMEOUT_SEC=360 \\
+                  ./scripts/wait-for-stack.sh
+                """
+                sh """
+                  API_URL=http://${env.HOST_GATEWAY}:8088 \\
+                  KEYCLOAK_URL=http://${env.HOST_GATEWAY}:8181 \\
+                  CORS_ORIGIN=http://localhost:3008 \\
+                  ./scripts/post-deploy-smoke.sh
+                """
+            }
+        }
+
+        // --- 10. Playwright E2E contra staging; teardown en post ---
+        //     El navegador corre dentro del contenedor Jenkins. keycloak-js usa PKCE
+        //     (Web Crypto), disponible solo en contexto seguro (HTTPS o localhost).
+        //     host.docker.internal es inseguro → sin crypto.subtle. Por eso un proxy
+        //     TCP expone localhost:{3008,8181,8088} y reenvía al host; el navegador
+        //     usa localhost (seguro, ya registrado como redirect URI del realm).
+        stage('E2E') {
+            options { timeout(time: 30, unit: 'MINUTES') }
+            steps {
+                dir('frontend') {
+                    sh 'npm ci --ignore-scripts'
+                    sh './node_modules/.bin/playwright install chromium'
+                    sh """
+                      node ../scripts/jenkins-e2e-portforward.mjs 3008 8181 8088 &
+                      PF_PID=\$!
+                      trap "kill \$PF_PID 2>/dev/null || true" EXIT
+                      sleep 3
+                      PLAYWRIGHT_BASE_URL=http://localhost:3008 \\
+                      API_BASE=http://localhost:8088 \\
+                      KEYCLOAK_URL=http://localhost:8181 \\
+                      KEYCLOAK_TOKEN_URL=http://localhost:8181/realms/inventory/protocol/openid-connect/token \\
+                      ./node_modules/.bin/playwright test e2e/helpers/login.spec.ts e2e/permissions.spec.ts --project=chromium
+                    """
+                }
+            }
+            post {
+                always {
+                    sh './scripts/jenkins-host-compose.sh down -v || true'
+                    archiveArtifacts artifacts: 'frontend/test-results/**', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'docs/final/ci/**', allowEmptyArchive: true
+                }
+            }
+        }
     }
 
+    // --- Cierre: JUnit + JaCoCo; cleanup si falla ---
     post {
         always {
-            junit allowEmptyResults: true, testResults: 'build/test-results/test/*.xml,build/test-results/integrationTest/*.xml'
+            junit allowEmptyResults: true, testResults: 'build/test-results/**/*.xml'
             archiveArtifacts artifacts: 'build/reports/jacoco/test/**', allowEmptyArchive: true
         }
         success {
-            echo 'Pipeline completed successfully.'
+            echo 'CICD-02 pipeline completed successfully (all stages green).'
         }
         failure {
             echo 'Pipeline failed. Check stage logs.'
+            sh "docker compose -f ${env.SECURITY_COMPOSE} down -v || true"
+            sh 'chmod +x scripts/jenkins-host-compose.sh 2>/dev/null || true'
+            sh './scripts/jenkins-host-compose.sh down -v || true'
         }
     }
 }

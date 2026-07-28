@@ -5,6 +5,7 @@ import icc354.pucmm.proyectoqa.application.dto.TopProductResponse;
 import icc354.pucmm.proyectoqa.application.service.ReportService;
 import icc354.pucmm.proyectoqa.controller.GlobalExceptionHandler;
 import icc354.pucmm.proyectoqa.controller.ReportController;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -24,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Tag("api")
 @WebMvcTest(ReportController.class)
 @Import({GlobalExceptionHandler.class, ApiTestSecurityConfig.class})
 @ActiveProfiles("api-test")

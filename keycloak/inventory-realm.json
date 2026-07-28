@@ -38,6 +38,18 @@
           "description": "View reports and dashboard metrics",
           "composite": false,
           "clientRole": true
+        },
+        {
+          "name": "audit:view",
+          "description": "View product audit / revision history",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "user:manage",
+          "description": "Manage application users (reserved for admin operations)",
+          "composite": false,
+          "clientRole": true
         }
       ]
     }
@@ -72,11 +84,15 @@
       "protocol": "openid-connect",
       "redirectUris": [
         "http://localhost:5173/*",
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "http://localhost:3008/*",
+        "http://localhost:3009/*"
       ],
       "webOrigins": [
         "http://localhost:5173",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:3008",
+        "http://localhost:3009"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
@@ -107,7 +123,15 @@
         }
       ],
       "clientRoles": {
-        "inventory-api": ["product:view", "product:manage", "stock:view", "stock:manage", "report:view"]
+        "inventory-api": [
+          "product:view",
+          "product:manage",
+          "stock:view",
+          "stock:manage",
+          "report:view",
+          "audit:view",
+          "user:manage"
+        ]
       }
     },
     {
@@ -127,6 +151,25 @@
       ],
       "clientRoles": {
         "inventory-api": ["product:view", "stock:view"]
+      }
+    },
+    {
+      "username": "stock-manager",
+      "enabled": true,
+      "email": "stock-manager@local",
+      "emailVerified": true,
+      "firstName": "Stock",
+      "lastName": "Manager",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "stock-manager",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "inventory-api": ["product:view", "stock:view", "stock:manage"]
       }
     }
   ]

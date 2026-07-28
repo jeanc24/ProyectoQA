@@ -1,0 +1,117 @@
+# TEST-03 — Security scans (OWASP ZAP + Dependency-Check)
+name: Security
+
+# Legacy / manual — security stages viven en DevSecOps Pipeline (CICD-01)
+on:
+  workflow_dispatch:
+
+jobs:
+  dependency-check:
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew scripts/dependency-check.sh
+
+      - name: Cache Dependency-Check database
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: dependency-check-${{ runner.os }}-${{ hashFiles('**/build.gradle') }}
+          restore-keys: |
+            dependency-check-${{ runner.os }}-
+
+      - name: Run Dependency-Check
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          # CI: sync NVD completa (cacheada entre runs)
+          DEPENDENCY_CHECK_AUTO_UPDATE: 'true'
+        run: ./scripts/dependency-check.sh
+
+      - name: Upload Dependency-Check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: docs/final/testing/dependency-check/
+
+  zap-baseline:
+    name: OWASP ZAP baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start API stack
+        run: |
+          docker compose up -d --build postgres keycloak tempo loki alloy api
+
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8080/actuator/health >/dev/null; then
+              echo "API UP"
+              exit 0
+            fi
+            echo "waiting ($i)..."
+            sleep 5
+          done
+          echo "API did not become healthy"
+          docker compose ps
+          docker compose logs --tail=80 api keycloak
+          exit 1
+
+      # API puede estar UP mientras Keycloak aún importa el realm → smoke JWT falla con JSON vacío
+      - name: Wait for Keycloak token endpoint
+        run: |
+          TOKEN_URL="http://localhost:8081/realms/inventory/protocol/openid-connect/token"
+          for i in $(seq 1 60); do
+            BODY=$(curl -s -X POST "$TOKEN_URL" \
+              -H "Content-Type: application/x-www-form-urlencoded" \
+              -d "grant_type=password" \
+              -d "client_id=inventory-api" \
+              -d "client_secret=inventory-api-secret" \
+              -d "username=admin" \
+              -d "password=admin" || true)
+            if echo "$BODY" | python3 -c "import sys,json; json.load(sys.stdin)['access_token']" 2>/dev/null; then
+              echo "Keycloak token endpoint UP"
+              exit 0
+            fi
+            echo "waiting Keycloak ($i)..."
+            sleep 5
+          done
+          echo "Keycloak did not issue access_token"
+          docker compose ps
+          docker compose logs --tail=80 keycloak
+          exit 1
+
+      - name: Security smoke (JWT / CORS / permisos)
+        run: |
+          chmod +x scripts/security-smoke.sh
+          ./scripts/security-smoke.sh
+
+      - name: ZAP baseline scan
+        run: |
+          chmod +x scripts/zap-baseline.sh
+          ./scripts/zap-baseline.sh http://localhost:8080/swagger-ui.html
+
+      - name: Upload ZAP + smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-security-reports
+          path: docs/final/testing/zap/
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
