@@ -27,11 +27,10 @@ El pipeline DevSecOps sigue levantando staging **efímero en el runner** (prueba
 | API | `inventory-api-prod` | free |
 | Keycloak | `inventory-keycloak-prod` | free |
 
-> **Keycloak en plan free (512 MB):** es justo (Red Hat recomienda ≥750 MB). La imagen
-> usa `start --optimized`, Postgres, `--cache=local`, heap **192 m**, SerialGC y caches
-> pequeños. El OOM al login venía de `start-dev` + heap alto (384 m) + non-heap > 512 MB.
-> Tras mergear, sincronizar Blueprint / Manual Deploy y fijar `DATABASE_URL` + `KC_START_CMD=start`.
-> Si aún OOM en free puro, no hay más margen realista sin bajar de Keycloak.
+> **Keycloak en plan free (512 MB):** es justo (Red Hat recomienda ≥750 MB). Usa
+> `start --optimized`, Postgres, `--cache=local`, heap **128 m** y Metaspace **168 m**
+> (Liquibase del 1er boot falla con Metaspace 96 m). Tras mergear: Manual Deploy y
+> actualizar en el dashboard `JAVA_OPTS_*` si quedaron valores viejos.
 
 ### Vercel
 

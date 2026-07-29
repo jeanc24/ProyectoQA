@@ -77,16 +77,12 @@ services:
         value: xforwarded
       - key: KC_CACHE
         value: local
-      - key: KC_CACHE_EMBEDDED_SESSIONS_MAX_COUNT
-        value: "100"
-      - key: KC_CACHE_EMBEDDED_CLIENT_SESSIONS_MAX_COUNT
-        value: "100"
       - key: KC_CACHE_EMBEDDED_USERS_MAX_COUNT
         value: "100"
       - key: JAVA_OPTS_KC_HEAP
-        value: "-Xms32m -Xmx192m -XX:MaxRAMPercentage=40 -XX:InitialRAMPercentage=15"
+        value: "-Xms32m -Xmx128m"
       - key: JAVA_OPTS_APPEND
-        value: "-XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m"
+        value: "-XX:MaxMetaspaceSize=168m -XX:MetaspaceSize=96m"
       - key: KC_START_CMD
         value: start
 
