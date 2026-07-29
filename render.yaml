@@ -51,42 +51,53 @@ services:
   - type: web
     name: inventory-keycloak-staging
     runtime: docker
-    # Plan free (512MB) obligatorio curso. optimized + Postgres + heap 128m + Metaspace 168m.
+    # Plan free (512MB). JVM alineada a Blueprint de referencia del curso que ya arranca en free.
     plan: free
     branch: develop
     region: oregon
     dockerfilePath: ./infra/keycloak/Dockerfile
     dockerContext: .
-    healthCheckPath: /realms/master
+    # "/" responde en cuanto hay HTTP; /realms/* falla el health en el 1er boot largo.
+    healthCheckPath: /
     autoDeployTrigger: commit
     envVars:
+      - key: KC_BOOTSTRAP_ADMIN_USERNAME
+        value: admin
+      - key: KC_BOOTSTRAP_ADMIN_PASSWORD
+        value: admin
       - key: KEYCLOAK_ADMIN
-        sync: false
+        value: admin
       - key: KEYCLOAK_ADMIN_PASSWORD
-        sync: false
+        value: admin
       - key: DATABASE_URL
         fromDatabase:
           name: inventory-staging-db
           property: connectionString
       - key: KC_DB
         value: postgres
+      - key: KC_DB_USERNAME
+        fromDatabase:
+          name: inventory-staging-db
+          property: user
+      - key: KC_DB_PASSWORD
+        fromDatabase:
+          name: inventory-staging-db
+          property: password
       - key: KC_HOSTNAME
-        sync: false
+        value: https://inventory-keycloak-staging.onrender.com
       - key: KC_HOSTNAME_STRICT
         value: "false"
       - key: KC_HTTP_ENABLED
         value: "true"
       - key: KC_PROXY_HEADERS
         value: xforwarded
+      - key: KC_HEALTH_ENABLED
+        value: "true"
       - key: KC_CACHE
         value: local
-      - key: KC_CACHE_EMBEDDED_USERS_MAX_COUNT
-        value: "100"
-      # Heap 128m + Metaspace 168m: Liquibase falla con Metaspace=96m.
-      - key: JAVA_OPTS_KC_HEAP
-        value: "-Xms32m -Xmx128m"
+      # Misma receta que el equipo de referencia (sin UseSerialGC; heap via APPEND).
       - key: JAVA_OPTS_APPEND
-        value: "-XX:MaxMetaspaceSize=168m -XX:MetaspaceSize=96m"
+        value: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m"
       - key: KC_START_CMD
         value: start
 
