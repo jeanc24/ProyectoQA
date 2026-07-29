@@ -26,6 +26,8 @@ Monorepo con API REST (Spring Boot), interfaz web (React), base de datos Postgre
 | Observabilidad | Spring Actuator, Micrometer, OpenTelemetry, Prometheus, Tempo, Loki, Alloy, Alertmanager, Grafana |
 
 
+> **Guía de defensa del proyecto:** [`docs/final/defensa/`](docs/final/defensa/) — arquitectura, flujos, seguridad, datos, testing, CI/CD y observabilidad explicados con el código, más un banco de 120 preguntas con respuesta.
+
 ## Índice
 
 - [Prerrequisitos](#prerrequisitos)
@@ -484,12 +486,16 @@ Detalle, artefacto JaCoCo y Jenkins local: sección [CI](#ci-github-actions) y [
 
 ## Pruebas automatizadas
 
+> **Catálogo completo** (95 JUnit + 9 E2E + k6 + ZAP + smokes + exploratorio, método por método): [`docs/final/testing/README.md`](docs/final/testing/README.md).
+
 ### Resumen
 
 
 | Tipo                  | Comando                                                        | Requisitos                    |
 | --------------------- | -------------------------------------------------------------- | ----------------------------- |
 | Unitarios (backend)   | `./gradlew test`                                               | JDK 21                        |
+| API scenarios         | `./gradlew apiTest`                                            | JDK 21                        |
+| Contract              | `./gradlew contractTest`                                       | JDK 21                        |
 | Integración (backend) | `./gradlew integrationTest`                                    | Docker en ejecución           |
 | Performance (k6)      | `./scripts/k6-run.sh load` / `stress`                          | API :8080 + Docker            |
 | Seguridad (ZAP + DC)  | `./scripts/zap-baseline.sh` / `./scripts/dependency-check.sh`  | API :8080 (ZAP) / JDK 21 (DC) |
