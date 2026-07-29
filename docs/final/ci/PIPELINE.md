@@ -34,6 +34,13 @@ Conservados con `workflow_dispatch` para re-ejecutar un trozo aislado:
 - `.github/workflows/security.yml` — DC + ZAP
 - `.github/workflows/post-deploy-staging.yml` — staging smoke/E2E
 
+## Deploy cloud (persistente)
+
+- [`.github/workflows/deploy-staging.yml`](../../../.github/workflows/deploy-staging.yml) — push `develop` → Render + Vercel staging
+- [`.github/workflows/deploy-prod.yml`](../../../.github/workflows/deploy-prod.yml) — push `main` → Render + Vercel prod
+
+Detalle y checklist: [`CLOUD.md`](CLOUD.md).
+
 ## Secretos / variables
 
 | Nombre | Uso |

@@ -471,6 +471,8 @@ docker compose start api
 
 Cada push o PR a `develop` ejecuta el **DevSecOps Pipeline** (build → unit → integration → API → contract → Sonar → Docker → security → staging E2E → quality gate). Guía: [`docs/final/ci/PIPELINE.md`](docs/final/ci/PIPELINE.md).
 
+**Cloud (opcional / pedido verbal):** staging ← `develop`, prod ← `main` vía Render + Vercel. Guía: [`docs/final/ci/CLOUD.md`](docs/final/ci/CLOUD.md). Grafana: uno solo en Compose local.
+
 Reproducir localmente los stages de test:
 
 ```powershell

@@ -3,6 +3,9 @@
 build
 frontend
 docs
-scripts
 *.md
 .env
+.env.*
+!.env.example
+scripts/**
+!scripts/docker-entrypoint-api.sh

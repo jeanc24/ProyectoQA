@@ -2332,7 +2332,7 @@ Flujo de un deploy:
 4. Healthchecks / `wait-for-stack.sh` esperan a que Keycloak y la API respondan.
 5. Smoke (`post-deploy-smoke.sh`) y, en CI, E2E Playwright.
 
-**No hay deploy a Vercel/Render/GCP en el repo hoy.** El requisito del PDF se cumple con el stack desplegado vía Compose (local + staging en CI). Ver [P135](#p135-vercel-y-render--hay-que-desplegar-en-una-plataforma).
+**Además hay plantillas cloud** (Render + Vercel): [`CLOUD.md`](../ci/CLOUD.md), `render.yaml`, `deploy-staging.yml` / `deploy-prod.yml`. Compose local/CI sigue siendo el camino del PDF; el PaaS es el pedido verbal. Ver [P135](#p135-vercel-y-render--hay-que-desplegar-en-una-plataforma).
 
 ---
 
@@ -2341,8 +2341,10 @@ Flujo de un deploy:
 | Momento | Ambiente | Quién |
 |---|---|---|
 | Desarrollo diario | `local` / perfil Spring `docker` o `local` | Developer en su máquina |
-| Cada push/PR a `develop` | **Staging efímero** | Job `staging-deploy-e2e` del pipeline (Compose staging → smoke → E2E → tear down) |
-| Merge a `main` / release | Plantilla **prod** | Manual con `docker-compose.prod.yml` (no hay auto-deploy a cloud) |
+| Cada push/PR a `develop` | **Staging efímero (CI)** | Job `staging-deploy-e2e` (Compose en el runner) |
+| Push a `develop` (cloud) | **Staging persistente** | `deploy-staging.yml` → Render + Vercel |
+| Push a `main` (cloud) | **Production** | `deploy-prod.yml` → Render + Vercel |
+| Compose prod local | Plantilla | `docker-compose.prod.yml` (demo local) |
 
 El punto exacto en el pipeline:
 
@@ -2515,7 +2517,7 @@ También hay **load** (15 VUs, p95 &lt; 500 ms). Guía: [`docs/final/testing/k6/
 | **Compose en CI** (lo que tenemos) | Cumple “ambiente desplegado + smoke/E2E post-deploy” del curso |
 | **Render** (API + Postgres + Keycloak) + **Vercel** (frontend) | Pedido verbal del profesor; pendiente si lo exige en la defensa |
 
-Si preguntan y aún no está: decir con honestidad que el pipeline ya despliega staging real con Compose; el siguiente paso sería publicar API en Render y SPA en Vercel apuntando al mismo Keycloak/issuer. Ver [P135](#p135-vercel-y-render--hay-que-desplegar-en-una-plataforma).
+Si preguntan por cloud: Blueprint Render + Vercel ya están en el repo ([CLOUD.md](../ci/CLOUD.md)); falta conectar cuentas y secrets. Compose CI sigue siendo el smoke automático. Ver [P135](#p135-vercel-y-render--hay-que-desplegar-en-una-plataforma).
 
 ---
 
@@ -2624,15 +2626,26 @@ Flujo técnico: API → OTLP → Alloy → Tempo. Cada log lleva `[traceId,spanI
 
 ### P135. Vercel y Render — ¿hay que desplegar en una plataforma?
 
-Pedido verbal del profesor. **En el repositorio aún no están.**
+Pedido verbal del profesor. **Sí, y el repo ya trae el andamiaje:**
 
-Respuesta recomendada en defensa:
+| Pieza | Dónde |
+|---|---|
+| Blueprint staging | [`render.yaml`](../../../render.yaml) (branch `develop`) |
+| Blueprint prod | [`infra/render/render.prod.yaml`](../../../infra/render/render.prod.yaml) (branch `main`) |
+| FE | Vercel (`frontend/`, [`vercel.json`](../../../frontend/vercel.json)) |
+| Pipelines | `deploy-staging.yml` / `deploy-prod.yml` |
+| Guía | [`CLOUD.md`](../ci/CLOUD.md) |
 
-1. Hoy el “deploy” demostrable es Compose (dev + staging en Actions).
-2. Si el tribunal exige PaaS: **Render** para API/Postgres/Keycloak (o API apuntando a un Postgres gestionado) y **Vercel** para el frontend estático, con `VITE_*` al issuer/API públicos y CORS actualizado.
-3. Los secretos pasarían de `.env` a variables del PaaS; el pipeline seguiría construyendo y podría desplegar con CLI/`gh` en un job posterior.
+**Grafana:** uno solo en Compose local. No hay tres Grafanas (dev/staging/prod): el profesor lo indicó y en free tier es inviable.
 
-No inventar que ya está en Vercel/Render si no se ha hecho.
+Respuesta en defensa:
+
+1. Staging cloud ← `develop`; prod cloud ← `main`.
+2. API + Postgres + Keycloak en **Render**; SPA en **Vercel**.
+3. El DevSecOps sigue probando staging Compose efímero en CI; el cloud es el ambiente persistente.
+4. Observabilidad se demuestra en local (un Grafana).
+
+Tras crear las cuentas hay que pegar URLs en Secrets/Variables y completar env `sync: false` en Render (issuer Keycloak = URL pública).
 
 ---
 
