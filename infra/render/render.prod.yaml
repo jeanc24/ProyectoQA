@@ -75,10 +75,18 @@ services:
         value: "true"
       - key: KC_PROXY_HEADERS
         value: xforwarded
-      - key: KC_HEALTH_ENABLED
-        value: "true"
+      - key: KC_CACHE
+        value: local
+      - key: KC_CACHE_EMBEDDED_SESSIONS_MAX_COUNT
+        value: "100"
+      - key: KC_CACHE_EMBEDDED_CLIENT_SESSIONS_MAX_COUNT
+        value: "100"
+      - key: KC_CACHE_EMBEDDED_USERS_MAX_COUNT
+        value: "100"
       - key: JAVA_OPTS_KC_HEAP
-        value: "-XX:MaxRAMPercentage=65 -Xms64m -Xmx384m"
+        value: "-Xms32m -Xmx192m -XX:MaxRAMPercentage=40 -XX:InitialRAMPercentage=15"
+      - key: JAVA_OPTS_APPEND
+        value: "-XX:+UseSerialGC -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m"
       - key: KC_START_CMD
         value: start
 

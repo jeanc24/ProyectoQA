@@ -27,10 +27,11 @@ El pipeline DevSecOps sigue levantando staging **efímero en el runner** (prueba
 | API | `inventory-api-prod` | free |
 | Keycloak | `inventory-keycloak-prod` | free |
 
-> **Exit 137 / “No open ports” en Keycloak:** OOM en free (512 MB) con `start-dev`.
-> La imagen `infra/keycloak/Dockerfile` hace `kc.sh build` en build-time y arranca con
-> `start --optimized` + Postgres (`DATABASE_URL`) + heap acotado (`JAVA_OPTS_KC_HEAP`).
-> Si aún falla, subir el servicio Keycloak a **standard** (2 GB) en el dashboard.
+> **Keycloak en plan free (512 MB):** es justo (Red Hat recomienda ≥750 MB). La imagen
+> usa `start --optimized`, Postgres, `--cache=local`, heap **192 m**, SerialGC y caches
+> pequeños. El OOM al login venía de `start-dev` + heap alto (384 m) + non-heap > 512 MB.
+> Tras mergear, sincronizar Blueprint / Manual Deploy y fijar `DATABASE_URL` + `KC_START_CMD=start`.
+> Si aún OOM en free puro, no hay más margen realista sin bajar de Keycloak.
 
 ### Vercel
 
