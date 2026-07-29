@@ -93,7 +93,7 @@ test.describe("Permissions by role", () => {
     await expect(page.getByTestId("audit-history-table")).toBeVisible();
   });
 
-  test("admin can open users directory; viewer cannot", async ({ page }) => {
+  test("admin can open users directory", async ({ page }) => {
     await loginAs(page, "admin");
     await expect(page.getByTestId("nav-users")).toBeVisible();
     await page.getByTestId("nav-users").click();
@@ -101,7 +101,9 @@ test.describe("Permissions by role", () => {
     await expect(page.getByTestId("users-keycloak-note")).toBeVisible();
     await expect(page.getByTestId("users-table")).toBeVisible();
     await expect(page.getByText("admin", { exact: true }).first()).toBeVisible();
+  });
 
+  test("viewer cannot open users directory", async ({ page }) => {
     await loginAs(page, "viewer");
     await expect(page.getByTestId("nav-users")).toHaveCount(0);
     await page.goto("/users");
