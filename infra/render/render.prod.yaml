@@ -54,9 +54,13 @@ services:
     region: oregon
     dockerfilePath: ./infra/keycloak/Dockerfile
     dockerContext: .
-    healthCheckPath: /realms/master
+    healthCheckPath: /
     autoDeployTrigger: commit
     envVars:
+      - key: KC_BOOTSTRAP_ADMIN_USERNAME
+        sync: false
+      - key: KC_BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
       - key: KEYCLOAK_ADMIN
         sync: false
       - key: KEYCLOAK_ADMIN_PASSWORD
@@ -67,6 +71,14 @@ services:
           property: connectionString
       - key: KC_DB
         value: postgres
+      - key: KC_DB_USERNAME
+        fromDatabase:
+          name: inventory-prod-db
+          property: user
+      - key: KC_DB_PASSWORD
+        fromDatabase:
+          name: inventory-prod-db
+          property: password
       - key: KC_HOSTNAME
         sync: false
       - key: KC_HOSTNAME_STRICT
@@ -75,14 +87,12 @@ services:
         value: "true"
       - key: KC_PROXY_HEADERS
         value: xforwarded
+      - key: KC_HEALTH_ENABLED
+        value: "true"
       - key: KC_CACHE
         value: local
-      - key: KC_CACHE_EMBEDDED_USERS_MAX_COUNT
-        value: "100"
-      - key: JAVA_OPTS_KC_HEAP
-        value: "-Xms32m -Xmx128m"
       - key: JAVA_OPTS_APPEND
-        value: "-XX:MaxMetaspaceSize=168m -XX:MetaspaceSize=96m"
+        value: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m"
       - key: KC_START_CMD
         value: start
 

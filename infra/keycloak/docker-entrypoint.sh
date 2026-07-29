@@ -1,24 +1,18 @@
 #!/bin/sh
-# Render free (512MB): heap bajo + cache local + Postgres + start --optimized.
+# Render free (512MB). Receta alineada con Blueprint que ya funciona en el curso:
+#   JAVA_OPTS_APPEND="-Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m" (sin UseSerialGC, sin JAVA_OPTS_KC_HEAP)
 set -eu
 
 PORT="${PORT:-8080}"
 export KC_HTTP_PORT="$PORT"
 export KC_HTTP_HOST="${KC_HTTP_HOST:-0.0.0.0}"
 
-# Presupuesto ~512MB: Liquibase del 1er boot necesita Metaspace alto.
-# MaxMetaspaceSize=96m → OutOfMemoryError: Metaspace a mitad del schema.
-# Heap 128m deja ~380m para metaspace/native/code-cache.
-export JAVA_OPTS_KC_HEAP="${JAVA_OPTS_KC_HEAP:--Xms32m -Xmx128m}"
-# No tocar el GC (Keycloak ya usa G1). Metaspace generoso para el primer liquibase.
-export JAVA_OPTS_APPEND="${JAVA_OPTS_APPEND:--XX:MaxMetaspaceSize=168m -XX:MetaspaceSize=96m}"
+# No fijar JAVA_OPTS_KC_HEAP: Keycloak calcula heap; APPEND fija tope como el Blueprint de referencia.
+export JAVA_OPTS_APPEND="${JAVA_OPTS_APPEND:--Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m}"
 
-# Single-node. No limitar caches de sessions si persistent-user-sessions está off.
 export KC_CACHE="${KC_CACHE:-local}"
-export KC_CACHE_EMBEDDED_USERS_MAX_COUNT="${KC_CACHE_EMBEDDED_USERS_MAX_COUNT:-100}"
-export KC_CACHE_EMBEDDED_REALMS_MAX_COUNT="${KC_CACHE_EMBEDDED_REALMS_MAX_COUNT:-10}"
 
-# Render Postgres → JDBC Keycloak
+# Render Postgres → JDBC (si el Blueprint ya inyecta KC_DB_USERNAME/PASSWORD, se respetan)
 if [ -n "${DATABASE_URL:-}" ]; then
   export KC_DB="${KC_DB:-postgres}"
   raw="${DATABASE_URL%%\?*}"
@@ -34,7 +28,7 @@ if [ -n "${DATABASE_URL:-}" ]; then
   fi
 fi
 
-# Compat: KEYCLOAK_ADMIN* (deprecated) → KC_BOOTSTRAP_ADMIN*
+# Compat: KEYCLOAK_ADMIN* → KC_BOOTSTRAP_ADMIN*
 if [ -n "${KEYCLOAK_ADMIN:-}" ] && [ -z "${KC_BOOTSTRAP_ADMIN_USERNAME:-}" ]; then
   export KC_BOOTSTRAP_ADMIN_USERNAME="$KEYCLOAK_ADMIN"
 fi
@@ -42,11 +36,9 @@ if [ -n "${KEYCLOAK_ADMIN_PASSWORD:-}" ] && [ -z "${KC_BOOTSTRAP_ADMIN_PASSWORD:
   export KC_BOOTSTRAP_ADMIN_PASSWORD="$KEYCLOAK_ADMIN_PASSWORD"
 fi
 
-# start-dev: Compose/CI. Cloud: KC_START_CMD=start.
 MODE="${KC_START_CMD:-start-dev}"
 
 if [ "$MODE" = "start" ]; then
-  # IGNORE_EXISTING evita reimport OVERWRITE (pico de RAM) en cada redeploy.
   exec /opt/keycloak/bin/kc.sh start --optimized --cache=local --import-realm \
     --spi-import--dir--strategy=IGNORE_EXISTING \
     --http-port="$PORT" \

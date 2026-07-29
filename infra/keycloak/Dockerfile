@@ -3,11 +3,11 @@
 #   docker build -f infra/keycloak/Dockerfile -t inventory-keycloak .
 FROM quay.io/keycloak/keycloak:26.0 AS builder
 
-ENV KC_HEALTH_ENABLED=false
+ENV KC_HEALTH_ENABLED=true
 ENV KC_METRICS_ENABLED=false
 ENV KC_HTTP_ENABLED=true
 ENV KC_DB=postgres
-# Menos memoria: sin sesiones persistentes ni telemetría embebida.
+# Menos memoria en single-node free tier.
 ENV KC_FEATURES_DISABLED=persistent-user-sessions
 
 WORKDIR /opt/keycloak

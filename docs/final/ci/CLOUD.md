@@ -27,10 +27,11 @@ El pipeline DevSecOps sigue levantando staging **efímero en el runner** (prueba
 | API | `inventory-api-prod` | free |
 | Keycloak | `inventory-keycloak-prod` | free |
 
-> **Keycloak en plan free (512 MB):** es justo (Red Hat recomienda ≥750 MB). Usa
-> `start --optimized`, Postgres, `--cache=local`, heap **128 m** y Metaspace **168 m**
-> (Liquibase del 1er boot falla con Metaspace 96 m). Tras mergear: Manual Deploy y
-> actualizar en el dashboard `JAVA_OPTS_*` si quedaron valores viejos.
+> **Keycloak free (512 MB):** JVM alineada al Blueprint de referencia del curso que ya
+> funciona: `JAVA_OPTS_APPEND=-Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m` (sin
+> `JAVA_OPTS_KC_HEAP`, sin `UseSerialGC`), Postgres, `healthCheckPath: /`,
+> `KC_DB_USERNAME`/`PASSWORD` desde la DB. Tras mergear: **borrar** en el dashboard
+> `JAVA_OPTS_KC_HEAP` si quedó de deploys anteriores, y Manual Deploy.
 
 ### Vercel
 
