@@ -73,7 +73,7 @@ El contenedor monta `/var/run/docker.sock`, `extra_hosts: host.docker.internal` 
 
 ### Security sin bind mounts
 
-El stage Security usa [`docker-compose.security.yml`](../../../docker-compose.security.yml) (postgres + keycloak con realm embebido + api). Así se evita el error `not a directory` al montar `./infra/...` desde el workspace de Jenkins, y el `Conflict` de nombres/puertos con `inventory-api` / `inventory-keycloak` del compose de desarrollo.
+El stage Security usa [`docker-compose.security.yml`](../../../docker-compose.security.yml) (postgres + keycloak con realm embebido + api) con [`/.env.security.example`](../../../.env.security.example) (se copia a `.env.security` si no existe). Así se evita el error `not a directory` al montar `./infra/...` desde el workspace de Jenkins, y el `Conflict` de nombres/puertos con `inventory-api` / `inventory-keycloak` del compose de desarrollo. Secretos y puertos (`8090`/`8091`/`5435`) vienen del env-file, no hardcodeados en el YAML.
 
 ## Evidencia (issue #85)
 

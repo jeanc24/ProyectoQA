@@ -1,0 +1,91 @@
+# Deploy STAGING (cloud) — develop → Render + Vercel
+# Blueprint Render: render.yaml · FE: proyecto Vercel (root = frontend/)
+name: Deploy staging (cloud)
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging-cloud
+  cancel-in-progress: true
+
+jobs:
+  # Render Blueprint con autoDeploy en develop suele desplegar solo con el push.
+  # Este job dispara redeploy vía Deploy Hook si está configurado (opcional).
+  trigger-render:
+    name: Trigger Render (staging)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy hook API
+        env:
+          RENDER_DEPLOY_HOOK_API_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_API_STAGING }}
+          RENDER_DEPLOY_HOOK_KEYCLOAK_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_KEYCLOAK_STAGING }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_DEPLOY_HOOK_API_STAGING:-}" ]; then
+            echo "RENDER_DEPLOY_HOOK_API_STAGING no configurado — confía en auto-deploy del Blueprint."
+            exit 0
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_API_STAGING"
+          if [ -n "${RENDER_DEPLOY_HOOK_KEYCLOAK_STAGING:-}" ]; then
+            curl -fsS -X POST "$RENDER_DEPLOY_HOOK_KEYCLOAK_STAGING"
+          fi
+          echo "Render deploy hooks fired."
+
+  deploy-vercel:
+    name: Deploy Vercel (staging)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@39.4.2 --ignore-scripts
+
+      - name: Pull + build + deploy (preview/staging)
+        working-directory: frontend
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_STAGING }}
+          VITE_API_URL: ${{ vars.STAGING_API_URL }}
+          VITE_KEYCLOAK_URL: ${{ vars.STAGING_KEYCLOAK_URL }}
+          VITE_KEYCLOAK_REALM: inventory
+          VITE_KEYCLOAK_CLIENT_ID: inventory-frontend
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ] || [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "::warning::Secrets Vercel staging incompletos — se omite deploy FE."
+            exit 0
+          fi
+          if [ -z "${VITE_API_URL:-}" ] || [ -z "${VITE_KEYCLOAK_URL:-}" ]; then
+            echo "::warning::vars STAGING_API_URL / STAGING_KEYCLOAK_URL vacías — configura también env en Vercel."
+          fi
+          vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+          vercel build --token="$VERCEL_TOKEN"
+          url=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
+          echo "Deployed: $url"
+
+  smoke-cloud:
+    name: Post-deploy smoke (staging cloud)
+    needs: [trigger-render, deploy-vercel]
+    runs-on: ubuntu-latest
+    if: ${{ vars.STAGING_API_URL != '' && vars.STAGING_KEYCLOAK_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait + smoke
+        env:
+          API_URL: ${{ vars.STAGING_API_URL }}
+          KEYCLOAK_URL: ${{ vars.STAGING_KEYCLOAK_URL }}
+          KEYCLOAK_CLIENT_ID: ${{ secrets.STAGING_KEYCLOAK_CLIENT_ID }}
+          KEYCLOAK_CLIENT_SECRET: ${{ secrets.STAGING_KEYCLOAK_CLIENT_SECRET }}
+          KEYCLOAK_ADMIN: ${{ secrets.STAGING_KEYCLOAK_ADMIN }}
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.STAGING_KEYCLOAK_ADMIN_PASSWORD }}
+          CORS_ORIGIN: ${{ vars.STAGING_FRONTEND_URL }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/wait-for-stack.sh scripts/post-deploy-smoke.sh scripts/lib/load-env.sh
+          TIMEOUT_SEC=600 ./scripts/wait-for-stack.sh
+          ./scripts/post-deploy-smoke.sh

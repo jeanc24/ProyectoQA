@@ -1,0 +1,62 @@
+.users-keycloak-note {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--social-bg);
+  text-align: left;
+}
+
+.users-keycloak-note p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.users-keycloak-note a {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.users-keycloak-note code {
+  font-size: 12px;
+}
+
+.user-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.user-badge.on {
+  background: color-mix(in srgb, #2e7d32 18%, transparent);
+}
+
+.user-badge.off {
+  opacity: 0.7;
+}
+
+.user-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.user-role-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--social-bg);
+  white-space: nowrap;
+}
+
+.users-page .muted {
+  color: var(--text);
+  opacity: 0.75;
+}

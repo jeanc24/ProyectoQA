@@ -58,6 +58,7 @@ pipeline {
         stage('Integration') {
             options { timeout(time: 20, unit: 'MINUTES') }
             steps {
+                sh 'test -f .env || cp .env.example .env'
                 sh './gradlew integrationTest --no-daemon'
             }
         }
@@ -88,49 +89,64 @@ pipeline {
                     }
                 }
                 // Idempotente: leftovers de un build abortado no deben bloquear.
-                sh "docker compose -f ${env.SECURITY_COMPOSE} down -v || true"
-                sh "docker compose -f ${env.SECURITY_COMPOSE} up -d --build"
+                // Secretos/puertos desde .env.security (plantilla versionada: .env.security.example).
+                sh '''
+                  if [ ! -f .env.security ]; then
+                    cp .env.security.example .env.security
+                  fi
+                '''
+                sh "docker compose -f ${env.SECURITY_COMPOSE} --env-file .env.security down -v || true"
+                sh "docker compose -f ${env.SECURITY_COMPOSE} --env-file .env.security up -d --build"
                 sh """
+                  set -a
+                  . ./.env.security
+                  set +a
+                  API_PORT=\${SECURITY_API_HOST_PORT:-${env.SECURITY_API_PORT}}
+                  KC_PORT=\${SECURITY_KEYCLOAK_HOST_PORT:-${env.SECURITY_KEYCLOAK_PORT}}
                   for i in \$(seq 1 60); do
-                    if curl -sf http://${env.HOST_GATEWAY}:${env.SECURITY_API_PORT}/actuator/health >/dev/null; then
+                    if curl -sf http://${env.HOST_GATEWAY}:\$API_PORT/actuator/health >/dev/null; then
                       echo "API UP"
                       exit 0
                     fi
                     echo "waiting API (\$i)..."
                     sleep 5
                   done
-                  docker compose -f ${env.SECURITY_COMPOSE} logs --tail=80 api keycloak
+                  docker compose -f ${env.SECURITY_COMPOSE} --env-file .env.security logs --tail=80 api keycloak
                   exit 1
                 """
                 sh """
-                  TOKEN_URL="http://${env.HOST_GATEWAY}:${env.SECURITY_KEYCLOAK_PORT}/realms/inventory/protocol/openid-connect/token"
-                  for i in \$(seq 1 60); do
-                    BODY=\$(curl -s -X POST "\$TOKEN_URL" \\
-                      -H "Content-Type: application/x-www-form-urlencoded" \\
-                      -d "grant_type=password" \\
-                      -d "client_id=inventory-api" \\
-                      -d "client_secret=inventory-api-secret" \\
-                      -d "username=admin" \\
-                      -d "password=admin" || true)
-                    if echo "\$BODY" | grep -q access_token; then
-                      echo "Keycloak UP"
-                      exit 0
-                    fi
-                    sleep 5
-                  done
-                  exit 1
+                  set -a
+                  . ./.env.security
+                  set +a
+                  # shellcheck source=scripts/lib/load-env.sh
+                  . ./scripts/lib/load-env.sh
+                  KC_PORT=\${SECURITY_KEYCLOAK_HOST_PORT:-${env.SECURITY_KEYCLOAK_PORT}}
+                  export KEYCLOAK_URL="http://${env.HOST_GATEWAY}:\$KC_PORT"
+                  ./scripts/wait-for-keycloak.sh
                 """
                 sh """
-                  API_URL=http://${env.HOST_GATEWAY}:${env.SECURITY_API_PORT} \\
-                  KEYCLOAK_URL=http://${env.HOST_GATEWAY}:${env.SECURITY_KEYCLOAK_PORT} \\
+                  set -a
+                  . ./.env.security
+                  set +a
+                  . ./scripts/lib/load-env.sh
+                  API_PORT=\${SECURITY_API_HOST_PORT:-${env.SECURITY_API_PORT}}
+                  KC_PORT=\${SECURITY_KEYCLOAK_HOST_PORT:-${env.SECURITY_KEYCLOAK_PORT}}
+                  API_URL=http://${env.HOST_GATEWAY}:\$API_PORT \\
+                  KEYCLOAK_URL=http://${env.HOST_GATEWAY}:\$KC_PORT \\
                   ./scripts/security-smoke.sh
                 """
                 // ZAP --network host → localhost del daemon = puerto publicado del security API
-                sh "./scripts/zap-baseline.sh http://localhost:${env.SECURITY_API_PORT}/swagger-ui.html"
+                sh """
+                  set -a
+                  . ./.env.security
+                  set +a
+                  API_PORT=\${SECURITY_API_HOST_PORT:-${env.SECURITY_API_PORT}}
+                  ./scripts/zap-baseline.sh http://localhost:\$API_PORT/swagger-ui.html
+                """
             }
             post {
                 always {
-                    sh "docker compose -f ${env.SECURITY_COMPOSE} down -v || true"
+                    sh "docker compose -f ${env.SECURITY_COMPOSE} --env-file .env.security down -v || true"
                     archiveArtifacts artifacts: 'docs/final/testing/dependency-check/**', allowEmptyArchive: true
                     archiveArtifacts artifacts: 'docs/final/testing/zap/**', allowEmptyArchive: true
                 }
