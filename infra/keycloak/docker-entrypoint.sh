@@ -9,7 +9,8 @@ export KC_HTTP_HOST="${KC_HTTP_HOST:-0.0.0.0}"
 # En 512MB el non-heap (~150–250MB) come mucho: heap alto (384m) → OOM al login.
 # Dejar ~300MB libres fuera del heap.
 export JAVA_OPTS_KC_HEAP="${JAVA_OPTS_KC_HEAP:--Xms32m -Xmx192m -XX:MaxRAMPercentage=40 -XX:InitialRAMPercentage=15}"
-export JAVA_OPTS_APPEND="${JAVA_OPTS_APPEND:--XX:+UseSerialGC -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m}"
+# No cambiar el GC: Keycloak ya fija G1; UseSerialGC → "Multiple garbage collectors selected".
+export JAVA_OPTS_APPEND="${JAVA_OPTS_APPEND:--XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m}"
 
 # Caches embebidos pequeños (single-node demo).
 export KC_CACHE="${KC_CACHE:-local}"

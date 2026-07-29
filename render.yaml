@@ -90,7 +90,7 @@ services:
       - key: JAVA_OPTS_KC_HEAP
         value: "-Xms32m -Xmx192m -XX:MaxRAMPercentage=40 -XX:InitialRAMPercentage=15"
       - key: JAVA_OPTS_APPEND
-        value: "-XX:+UseSerialGC -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m"
+        value: "-XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m"
       - key: KC_START_CMD
         value: start
 
