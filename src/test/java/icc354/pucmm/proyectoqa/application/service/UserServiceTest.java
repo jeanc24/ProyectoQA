@@ -12,7 +12,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,5 +50,22 @@ class UserServiceTest {
         assertThat(users.getFirst().roles()).containsExactly("user:manage");
         assertThat(users.get(1).email()).isEqualTo("v@example.com");
         assertThat(users.get(1).roles()).containsExactly("product:view", "stock:view");
+    }
+
+    @Test
+    void listUsers_skipsRolesWhenUserIdBlank() {
+        when(keycloakAdminClient.resolveClientUuid()).thenReturn("client-uuid");
+        when(keycloakAdminClient.listUsers(anyInt())).thenReturn(List.of(
+                Map.of("username", "orphan", "enabled", false)
+        ));
+
+        List<UserResponse> users = userService.listUsers();
+
+        assertThat(users).singleElement().satisfies(u -> {
+            assertThat(u.id()).isEmpty();
+            assertThat(u.username()).isEqualTo("orphan");
+            assertThat(u.enabled()).isFalse();
+            assertThat(u.roles()).isEmpty();
+        });
     }
 }
