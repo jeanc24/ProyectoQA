@@ -6,7 +6,7 @@ Todo lo que hace el proyecto, **dónde está en el código** y **por qué se hiz
 |---|---|
 | **Este archivo** | Explicación completa: arquitectura, flujos, seguridad, datos, frontend, ambientes, testing, CI/CD, observabilidad |
 | [`ARBOL.md`](ARBOL.md) | Árbol de carpetas comentado con la herramienta usada en cada archivo |
-| [`PREGUNTAS.md`](PREGUNTAS.md) | Banco de 120 preguntas con respuesta, código y archivo donde demostrarla: las 58 del avance + 62 nuevas |
+| [`PREGUNTAS.md`](PREGUNTAS.md) | Banco de preguntas con respuesta y archivo donde demostrarla: P1–P120 + bloque del profesor P121–P143 (pipeline, deploy, k6, roles, observabilidad) |
 
 ---
 
@@ -58,6 +58,7 @@ curl -sf http://localhost:8080/actuator/health   # espera {"status":"UP"}
 | `admin` | `admin` | los 7 |
 | `viewer` | `viewer` | `product:view`, `stock:view` |
 | `stock-manager` | `stock-manager` | `product:view`, `stock:view`, `stock:manage` |
+| `auditor` | `auditor` | `product:view`, `stock:view`, `audit:view` |
 
 ### Comandos de pruebas
 
@@ -68,7 +69,7 @@ curl -sf http://localhost:8080/actuator/health   # espera {"status":"UP"}
 ./gradlew integrationTest   # 26 de integración (Testcontainers, necesita Docker)
 ./gradlew jacocoTestReport  # cobertura → build/reports/jacoco/test/html/index.html
 
-cd frontend && npm run test:e2e     # 9 E2E Playwright
+cd frontend && npm run test:e2e     # 12 E2E Playwright
 
 ./scripts/security-smoke.sh         # JWT / CORS / permisos
 ./scripts/k6-run.sh load            # carga
@@ -427,7 +428,8 @@ El proyecto **no guarda usuarios ni contraseñas en PostgreSQL**. No existe tabl
 "users": [
   { "username": "admin",  "clientRoles": { "inventory-api": ["product:view","product:manage","stock:view","stock:manage","report:view","audit:view","user:manage"] } },
   { "username": "viewer", "clientRoles": { "inventory-api": ["product:view","stock:view"] } },
-  { "username": "stock-manager", "clientRoles": { "inventory-api": ["product:view","stock:view","stock:manage"] } }
+  { "username": "stock-manager", "clientRoles": { "inventory-api": ["product:view","stock:view","stock:manage"] } },
+  { "username": "auditor", "clientRoles": { "inventory-api": ["product:view","stock:view","audit:view"] } }
 ]
 ```
 
@@ -1088,7 +1090,7 @@ Importa **el mismo realm que producción**. `KeycloakSecurityIntegrationTest` pi
 
 ### 10.7 E2E con Playwright
 
-9 tests. El login es por interfaz real ([`helpers/auth.ts`](../../../frontend/e2e/helpers/auth.ts)):
+12 tests. El login es por interfaz real ([`helpers/auth.ts`](../../../frontend/e2e/helpers/auth.ts)):
 
 ```ts
 await page.goto("/login");
@@ -1306,6 +1308,7 @@ Eso es lo que diferencia "tenemos Grafana" de "tenemos observabilidad".
 | **Security** | [`security.json`](../../../infra/grafana/dashboards/security.json) | 401, 403, fallos de auth, fallos por URI |
 | **Business** | [`business.json`](../../../infra/grafana/dashboards/business.json) | Tráfico de productos, stock y reportes |
 | **API Ops** | [`api-ops.json`](../../../infra/grafana/dashboards/api-ops.json) | Vista del primer avance |
+| **Observabilidad** | [`observability.json`](../../../infra/grafana/dashboards/observability.json) | **Prometheus + Loki + Tempo en un solo dashboard** (el de la demo) |
 
 Consultas PromQL reales que puedes mostrar y explicar:
 
@@ -1383,8 +1386,7 @@ Decirlos tú antes de que los encuentren cambia por completo el tono de la evalu
 | **Secretos en los `.example`** | Los `.env*` reales están en `.gitignore`. Los `.example` tienen valores de demo a propósito para que cualquiera pueda levantar el proyecto. En producción irían en un gestor de secretos. |
 | **Cobertura baja en Sonar hasta el 28 de julio** | Sonar mostraba 34 % porque las carpetas `dto/` y `service/` no coincidían con los paquetes `application.dto` / `application.service`, y Sonar no lograba mapear la cobertura de los servicios al fuente. Además el reporte de JaCoCo ignoraba `integrationTest.exec`. Ambas cosas están corregidas: los archivos se movieron a `application/` y el reporte agrega todos los `.exec`. Ver [P97b](PREGUNTAS.md#p97b-por-qué-la-cobertura-en-sonar-estaba-en-34--y-qué-hicieron). |
 | **Dependency-Check no bloquea el build** | `failBuildOnCVSS = 11` en [`build.gradle`](../../../build.gradle) y la escala CVSS llega a 10, así que ningún CVE hace fallar el pipeline. Es informativo por ahora; la mejora es bajarlo a 7 con archivo de supresiones. Ver [P103](PREGUNTAS.md#p103-qué-encontró-zap-y-qué-hicieron-con-eso). |
-| **Los tableros de Grafana no tienen paneles de logs** | Los cinco son PromQL puro. Los logs se ven en **Explore** con la fuente Loki. Si piden logs, ve a Explore, no busques un panel. Ver [P50](PREGUNTAS.md#p50-cómo-se-visualizan-logs-y-métricas). |
-| **`uid` del datasource con distinta capitalización** | Los tableros piden `"uid": "Prometheus"` y el provisioning declara `uid: prometheus`. Grafana lo resuelve porque también coincide con el *nombre* del datasource, pero si algún panel apareciera con "Datasource not found", la causa es esa y se arregla en [`datasources.yml`](../../../infra/grafana/provisioning/datasources/datasources.yml). |
+| **`uid` del datasource con distinta capitalización** | Los tableros antiguos piden `"uid": "Prometheus"` y el provisioning declara `uid: prometheus`. El dashboard unificado [`observability.json`](../../../infra/grafana/dashboards/observability.json) ya usa `prometheus` en minúsculas. |
 | **Comentario incorrecto en `keycloak.ts`** | Dice que el token se guarda en `localStorage`, pero `keycloak-js` sin adaptador lo mantiene **en memoria**. Lo que evita repetir el login es la cookie de sesión de Keycloak en su propio dominio, que consulta `check-sso`. Ver [P87](PREGUNTAS.md#p87-dónde-se-guarda-el-token-en-el-navegador-es-seguro). |
 | **Sin caché de aplicación** | No hay Caffeine ni Redis. El único punto donde tendría sentido es el JWKS, y de eso ya se encarga el Resource Server de Spring, que lo cachea internamente. |
 | **k6 y ZAP no corren en cada PR** | Tardan demasiado. Se ejecutan bajo demanda y en Jenkins; sus evidencias están versionadas en `docs/final/testing/`. |

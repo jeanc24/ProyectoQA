@@ -23,6 +23,7 @@ ProyectoQA/
 ├── .env / .env.example           Variables ambiente dev
 ├── .env.staging(.example)        Variables ambiente staging
 ├── .env.production(.example)     Variables ambiente prod
+├── .env.security(.example)       Variables stack Security (ZAP/Jenkins)
 ├── .dockerignore                 Docker · qué NO entra al build context
 ├── .githooks/commit-msg          Git hook · valida Conventional Commits en local
 ├── README.md                     Documentación principal
@@ -219,7 +220,7 @@ frontend/
     ├── helpers/auth.ts            Login por UI, token por API, alta de producto
     ├── helpers/login.spec.ts      1 test · login admin → /products
     ├── helpers/products.spec.ts   1 test · crear producto y verlo en la tabla
-    ├── permissions.spec.ts        4 tests · viewer vs admin, 403 de API y de UI
+    ├── permissions.spec.ts        7 tests · viewer vs admin, auditor, users (`user:manage`)
     ├── stock.spec.ts              1 test · stock-manager registra IN
     └── dashboard.spec.ts          2 tests · KPIs y captura responsive
 ```
@@ -254,7 +255,8 @@ infra/
 │       ├── app.json                Latencia, throughput, errores
 │       ├── business.json           Tráfico por dominio de negocio
 │       ├── infra.json              CPU, memoria, JVM, HikariCP
-│       └── security.json           401 / 403 / auth failures
+│       ├── security.json           401 / 403 / auth failures
+│       └── observability.json     Prometheus + Loki + Tempo (demo unificada)
 ├── loki/loki.yml               Loki · almacenamiento de logs
 ├── tempo/tempo.yml             Tempo · almacenamiento de trazas
 ├── alloy/config.alloy          Grafana Alloy · receptor OTLP → Tempo/Loki + logs de Docker

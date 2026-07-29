@@ -4,11 +4,12 @@
 #
 # Aislado del compose de desarrollo:
 # - sin container_name (evita Conflict con inventory-api/keycloak/postgres)
-# - puertos host 8090/8091/5435 (dev usa 8080/8081/5433; staging 8088/8181/5434)
+# - puertos host por defecto 8090/8091/5435 (no reutiliza POSTGRES_HOST_PORT del .env de dev)
 #
-# Uso (desde Jenkinsfile Security):
-#   docker compose -f docker-compose.security.yml up -d --build
-#   docker compose -f docker-compose.security.yml down -v
+# Uso:
+#   cp .env.security.example .env.security   # opcional; si no hay file, aplican defaults
+#   docker compose -f docker-compose.security.yml --env-file .env.security up -d --build
+#   docker compose -f docker-compose.security.yml --env-file .env.security down -v
 #
 # Suficiente para smoke JWT/CORS + ZAP (no hace falta Alloy/Tempo/Loki).
 name: proyectoqa-security
@@ -17,15 +18,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: inventory
-      POSTGRES_USER: inventory
-      POSTGRES_PASSWORD: inventory
+      POSTGRES_DB: ${POSTGRES_DB:-inventory}
+      POSTGRES_USER: ${POSTGRES_USER:-inventory}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-inventory}
     ports:
-      - "5435:5432"
+      - "${SECURITY_POSTGRES_HOST_PORT:-5435}:5432"
     volumes:
       - security_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U inventory -d inventory"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -38,29 +39,30 @@ services:
     command: start-dev --import-realm
     environment:
       KC_HTTP_PORT: 8080
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       # Issuer = puerto host de este stack (8091). Debe coincidir con
-      # KEYCLOAK_ISSUER_URI de la API o el smoke JWT falla con 401.
-      KC_HOSTNAME: http://localhost:8091
+      # SECURITY_KEYCLOAK_ISSUER_URI de la API o el smoke JWT falla con 401.
+      KC_HOSTNAME: ${SECURITY_KEYCLOAK_HOSTNAME:-http://localhost:8091}
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
     ports:
-      - "8091:8080"
+      - "${SECURITY_KEYCLOAK_HOST_PORT:-8091}:8080"
 
   api:
     build: .
     image: proyectoqa-api:security
     ports:
-      - "8090:8080"
+      - "${SECURITY_API_HOST_PORT:-8090}:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory
-      SPRING_DATASOURCE_USERNAME: inventory
-      SPRING_DATASOURCE_PASSWORD: inventory
-      KEYCLOAK_ISSUER_URI: http://localhost:8091/realms/inventory
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/inventory/protocol/openid-connect/certs
-      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-inventory}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-inventory}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-inventory}
+      KEYCLOAK_ISSUER_URI: ${SECURITY_KEYCLOAK_ISSUER_URI:-http://localhost:8091/realms/inventory}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-inventory-api}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${JWT_JWK_SET_URI:-http://keycloak:8080/realms/inventory/protocol/openid-connect/certs}
+      CORS_ORIGINS: ${SECURITY_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
       # Sin Alloy: desactivar tracing/OTLP (endpoint vacío rompe el arranque)
       MANAGEMENT_TRACING_ENABLED: "false"
       MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false"

@@ -141,6 +141,34 @@ tasks.register('integrationTest', Test) {
     shouldRunAfter contractTest
 }
 
+// Inyecta claves de `.env` (gitignored) en la JVM de los tests si no están ya en el entorno.
+// Así KEYCLOAK_CLIENT_SECRET vive en .env, no en una clase Java versionada.
+def injectDotEnvInto = { Test task ->
+    def envFile = rootProject.file('.env')
+    if (!envFile.exists()) {
+        return
+    }
+    envFile.eachLine { String line ->
+        def trimmed = line.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith('#') || !trimmed.contains('=')) {
+            return
+        }
+        def idx = trimmed.indexOf('=')
+        def key = trimmed.substring(0, idx).trim()
+        def value = trimmed.substring(idx + 1).trim()
+        if (key.isEmpty()) {
+            return
+        }
+        if (System.getenv(key) == null && !task.getEnvironment().containsKey(key)) {
+            task.environment(key, value)
+        }
+    }
+}
+
+tasks.withType(Test).configureEach { testTask ->
+    injectDotEnvInto(testTask)
+}
+
 // Agrega los .exec que existan: integrationTest solo corre si hay Docker, y el
 // fileTree lo omite sin fallar cuando falta.
 tasks.named('jacocoTestReport') {

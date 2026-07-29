@@ -15,21 +15,21 @@
 
 Explorar **matriz de permisos** con usuarios:
 
-`admin`, `viewer`, `stock-manager`
+`admin`, `viewer`, `stock-manager`, `auditor`
 
-Áreas: productos CRUD, stock, dashboard/reportes, auditoría (`audit:view` solo en admin).
+Áreas: productos CRUD, stock, dashboard/reportes, auditoría (`audit:view` en `admin` y `auditor`).
 
 ## Matriz explorada (resultado sesión)
 
-| Acción | admin | viewer | stock-manager |
-|--------|-------|--------|---------------|
-| Login UI | ✓ | ✓ | ✓ |
-| Listar productos | ✓ | ✓ | ✓ |
-| Crear/editar/borrar producto | ✓ | ✗ (403/UI) | ✗ |
-| Historial Envers (botón / API) | ✓ | ✗ | ✗ |
-| Ver `/stock` | ✓ | ✓ | ✓ |
-| Registrar movimiento stock | ✓ | ✗ | ✓ |
-| Ver `/dashboard` / reports API | ✓ | ✗ 403 | ✗ |
+| Acción | admin | viewer | stock-manager | auditor |
+|--------|-------|--------|---------------|---------|
+| Login UI | ✓ | ✓ | ✓ | ✓ |
+| Listar productos | ✓ | ✓ | ✓ | ✓ |
+| Crear/editar/borrar producto | ✓ | ✗ (403/UI) | ✗ | ✗ |
+| Historial Envers (botón / API) | ✓ | ✗ | ✗ | ✓ |
+| Ver `/stock` | ✓ | ✓ | ✓ | ✓ |
+| Registrar movimiento stock | ✓ | ✗ | ✓ | ✗ |
+| Ver `/dashboard` / reports API | ✓ | ✗ 403 | ✗ | ✗ 403 |
 
 ## Notas de sesión
 
@@ -59,7 +59,7 @@ Explorar **matriz de permisos** con usuarios:
 
 ## Observaciones
 
-- Usuario demo `auditor` eliminado: en UI era indistinguible del `viewer`; `audit:view` queda en `admin`.
+- Usuario demo `auditor` (`product:view`, `stock:view`, `audit:view`): ve Historial Envers en productos; sin manage ni dashboard.
 - Matriz README coincide con comportamiento observado.
 - Evidencia automatizada relacionada: `scripts/security-smoke.sh`, E2E `permissions.spec.ts`.
 

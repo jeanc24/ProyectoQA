@@ -5,14 +5,24 @@
 #   API_URL=http://localhost:8088 KEYCLOAK_URL=http://localhost:8181 ./scripts/wait-for-stack.sh
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [[ -f "$ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$ROOT/.env"
+  set +a
+fi
+# shellcheck source=lib/load-env.sh
+source "$ROOT/scripts/lib/load-env.sh"
+
 API_URL="${API_URL:-http://localhost:8080}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8081}"
 FRONTEND_URL="${FRONTEND_URL:-}"
-REALM="${KEYCLOAK_REALM:-inventory}"
-CLIENT_ID="${KEYCLOAK_CLIENT_ID:-inventory-api}"
-CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET:-inventory-api-secret}"
-TOKEN_USER="${WAIT_TOKEN_USER:-admin}"
-TOKEN_PASS="${WAIT_TOKEN_PASS:-admin}"
+REALM="${KEYCLOAK_REALM}"
+CLIENT_ID="${KEYCLOAK_CLIENT_ID}"
+CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET}"
+TOKEN_USER="${WAIT_TOKEN_USER:-${KEYCLOAK_ADMIN}}"
+TOKEN_PASS="${WAIT_TOKEN_PASS:-${KEYCLOAK_ADMIN_PASSWORD}}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-300}"
 SLEEP_SEC="${SLEEP_SEC:-5}"
 

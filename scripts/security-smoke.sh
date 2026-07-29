@@ -1,16 +1,31 @@
 #!/usr/bin/env bash
 # TEST-03 — Evidencia JWT / CORS / permisos contra API en :8080 (perfil docker).
 # Uso (stack arriba): ./scripts/security-smoke.sh
+# Credenciales: .env o variables KEYCLOAK_* (defaults demo vía scripts/lib/load-env.sh).
 # Escribe: docs/final/testing/zap/EVIDENCIA-JWT-CORS-PERMISOS.md
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [[ -f "$ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$ROOT/.env"
+  set +a
+fi
+# shellcheck source=lib/load-env.sh
+source "$ROOT/scripts/lib/load-env.sh"
 OUT="$ROOT/docs/final/testing/zap"
 API="${API_URL:-http://localhost:8080}"
 KC="${KEYCLOAK_URL:-http://localhost:8081}"
-REALM="${KEYCLOAK_REALM:-inventory}"
-CLIENT_ID="${KEYCLOAK_CLIENT_ID:-inventory-api}"
-CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET:-inventory-api-secret}"
+REALM="${KEYCLOAK_REALM}"
+CLIENT_ID="${KEYCLOAK_CLIENT_ID}"
+CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET}"
+SMOKE_ADMIN_USER="${SMOKE_ADMIN_USER:-${KEYCLOAK_ADMIN}}"
+SMOKE_ADMIN_PASS="${SMOKE_ADMIN_PASS:-${KEYCLOAK_ADMIN_PASSWORD}}"
+SMOKE_VIEWER_USER="${SMOKE_VIEWER_USER:-viewer}"
+SMOKE_VIEWER_PASS="${SMOKE_VIEWER_PASS:-viewer}"
+SMOKE_AUDITOR_USER="${SMOKE_AUDITOR_USER:-auditor}"
+SMOKE_AUDITOR_PASS="${SMOKE_AUDITOR_PASS:-auditor}"
 
 mkdir -p "$OUT"
 EVID="$OUT/EVIDENCIA-JWT-CORS-PERMISOS.md"
@@ -60,8 +75,9 @@ fi
 CODE_NO_TOKEN=$(http_code GET "$API/api/v1/products")
 CODE_HEALTH=$(http_code GET "$API/actuator/health")
 
-TOKEN_VIEWER=$(get_token viewer viewer)
-TOKEN_ADMIN=$(get_token admin admin)
+TOKEN_VIEWER=$(get_token "$SMOKE_VIEWER_USER" "$SMOKE_VIEWER_PASS")
+TOKEN_ADMIN=$(get_token "$SMOKE_ADMIN_USER" "$SMOKE_ADMIN_PASS")
+TOKEN_AUDITOR=$(get_token "$SMOKE_AUDITOR_USER" "$SMOKE_AUDITOR_PASS")
 
 CODE_VIEWER_LIST=$(http_code GET "$API/api/v1/products" -H "Authorization: Bearer $TOKEN_VIEWER")
 CODE_VIEWER_CREATE=$(http_code POST "$API/api/v1/products" \
@@ -76,6 +92,10 @@ CODE_ADMIN_AUDIT=$(http_code GET "$API/api/v1/audit/products/1" \
   -H "Authorization: Bearer $TOKEN_ADMIN")
 CODE_VIEWER_AUDIT=$(http_code GET "$API/api/v1/audit/products/1" \
   -H "Authorization: Bearer $TOKEN_VIEWER")
+CODE_AUDITOR_AUDIT=$(http_code GET "$API/api/v1/audit/products/1" \
+  -H "Authorization: Bearer $TOKEN_AUDITOR")
+CODE_AUDITOR_REPORTS=$(http_code GET "$API/api/v1/reports/inventory-summary" \
+  -H "Authorization: Bearer $TOKEN_AUDITOR")
 
 # CORS: origen permitido vs no permitido
 CORS_OK=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "$API/api/v1/products" \
@@ -114,6 +134,8 @@ pass_fail() {
   pass_fail "$([[ "$CODE_VIEWER_REPORTS" == "403" ]] && echo 1 || echo 0)" "viewer GET /reports → $CODE_VIEWER_REPORTS (esperado 403)"
   pass_fail "$([[ "$CODE_ADMIN_AUDIT" == "200" || "$CODE_ADMIN_AUDIT" == "404" ]] && echo 1 || echo 0)" "admin GET /audit/products/1 → $CODE_ADMIN_AUDIT (200 o 404 si no existe)"
   pass_fail "$([[ "$CODE_VIEWER_AUDIT" == "403" ]] && echo 1 || echo 0)" "viewer GET /audit/products/1 → $CODE_VIEWER_AUDIT (esperado 403)"
+  pass_fail "$([[ "$CODE_AUDITOR_AUDIT" == "200" || "$CODE_AUDITOR_AUDIT" == "404" ]] && echo 1 || echo 0)" "auditor GET /audit/products/1 → $CODE_AUDITOR_AUDIT (200 o 404 si no existe)"
+  pass_fail "$([[ "$CODE_AUDITOR_REPORTS" == "403" ]] && echo 1 || echo 0)" "auditor GET /reports → $CODE_AUDITOR_REPORTS (esperado 403)"
   pass_fail "$([[ "$CORS_OK" == "200" || "$CORS_OK" == "204" ]] && echo 1 || echo 0)" "CORS preflight Origin localhost:3000 → HTTP $CORS_OK"
   pass_fail "$([[ "$CORS_ALLOW_ORIGIN" == "http://localhost:3000" ]] && echo 1 || echo 0)" "Access-Control-Allow-Origin = \`$CORS_ALLOW_ORIGIN\` (esperado http://localhost:3000)"
   pass_fail "$([[ -z "$CORS_BAD_ORIGIN_HDR" ]] && echo 1 || echo 0)" "Origen evil.example sin Allow-Origin (valor=\`${CORS_BAD_ORIGIN_HDR:-vacío}\`)"

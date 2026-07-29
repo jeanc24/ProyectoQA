@@ -6,13 +6,25 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [[ -f "$ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$ROOT/.env"
+  set +a
+fi
+# shellcheck source=lib/load-env.sh
+source "$ROOT/scripts/lib/load-env.sh"
 OUT="$ROOT/docs/final/ci"
 API="${API_URL:-http://localhost:8088}"
 KC="${KEYCLOAK_URL:-http://localhost:8181}"
-REALM="${KEYCLOAK_REALM:-inventory}"
-CLIENT_ID="${KEYCLOAK_CLIENT_ID:-inventory-api}"
-CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET:-inventory-api-secret}"
+REALM="${KEYCLOAK_REALM}"
+CLIENT_ID="${KEYCLOAK_CLIENT_ID}"
+CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET}"
 CORS_ORIGIN="${CORS_ORIGIN:-http://localhost:3008}"
+SMOKE_ADMIN_USER="${SMOKE_ADMIN_USER:-${KEYCLOAK_ADMIN}}"
+SMOKE_ADMIN_PASS="${SMOKE_ADMIN_PASS:-${KEYCLOAK_ADMIN_PASSWORD}}"
+SMOKE_VIEWER_USER="${SMOKE_VIEWER_USER:-viewer}"
+SMOKE_VIEWER_PASS="${SMOKE_VIEWER_PASS:-viewer}"
 
 mkdir -p "$OUT"
 EVID="$OUT/EVIDENCIA-POST-DEPLOY-SMOKE.md"
@@ -57,8 +69,8 @@ bold "API=$API  Keycloak=$KC"
 CODE_HEALTH=$(http_code GET "$API/actuator/health")
 CODE_NO_TOKEN=$(http_code GET "$API/api/v1/products")
 
-TOKEN_VIEWER=$(get_token viewer viewer)
-TOKEN_ADMIN=$(get_token admin admin)
+TOKEN_VIEWER=$(get_token "$SMOKE_VIEWER_USER" "$SMOKE_VIEWER_PASS")
+TOKEN_ADMIN=$(get_token "$SMOKE_ADMIN_USER" "$SMOKE_ADMIN_PASS")
 
 CODE_VIEWER_LIST=$(http_code GET "$API/api/v1/products" -H "Authorization: Bearer $TOKEN_VIEWER")
 CODE_VIEWER_CREATE=$(http_code POST "$API/api/v1/products" \

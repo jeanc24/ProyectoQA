@@ -24,6 +24,12 @@ app:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
   keycloak:
     client-id: ${KEYCLOAK_CLIENT_ID:inventory-api}
+    realm: ${KEYCLOAK_REALM:inventory}
+    # Admin REST (list users). Defaults = demo local; en prod vienen de env sin default (application-prod.yml).
+    admin-server-url: ${KEYCLOAK_ADMIN_SERVER_URL:http://localhost:8081}
+    admin-realm: ${KEYCLOAK_ADMIN_REALM:master}
+    admin-username: ${KEYCLOAK_ADMIN:admin}
+    admin-password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
 
 management:
   endpoints:

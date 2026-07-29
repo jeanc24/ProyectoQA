@@ -1,7 +1,9 @@
+# Perfil integration: URL/user/password los inyecta Testcontainers (AbstractIntegrationTest).
+# Placeholders solo por si alguien arranca con este perfil fuera de IT.
 spring:
   datasource:
-    username: inventory
-    password: inventory
+    username: ${POSTGRES_USER:inventory}
+    password: ${POSTGRES_PASSWORD:inventory}
 
 # OBS / OTel: no exportar en tests (sin Alloy)
 management:

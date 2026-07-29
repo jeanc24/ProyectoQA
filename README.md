@@ -68,19 +68,22 @@ Cinco pasos para ver la aplicación funcionando en el navegador:
 git clone https://github.com/jeanc24/ProyectoQA.git
 cd ProyectoQA
 
-# 2. Levantar infraestructura y aplicación (primera vez tarda por el build)
-docker compose up --build -d
+# 2. Variables de entorno (secretos fuera del compose; no se versiona `.env`)
+cp .env.example .env
 
-# 3. Esperar a que la API esté lista (~1–2 min en el primer arranque)
+# 3. Levantar infraestructura y aplicación (primera vez tarda por el build)
+docker compose --env-file .env up --build -d
+
+# 4. Esperar a que la API esté lista (~1–2 min en el primer arranque)
 #    Comprobar: curl http://localhost:8080/actuator/health  →  {"status":"UP"}
 
-# 4. Abrir el frontend
+# 5. Abrir el frontend
 #    http://localhost:3000
 
-# 5. Iniciar sesión con admin / admin → listado de productos en /products
+# 6. Iniciar sesión con admin / admin → listado de productos en /products
 ```
 
-Para detener todo: `docker compose down`
+Para detener todo: `docker compose --env-file .env down`
 
 ---
 
@@ -123,7 +126,7 @@ Los “roles” de app son **permisos granulares** del cliente `inventory-api` (
 | `stock:manage` | Registrar entradas, salidas y ajustes |
 | `report:view` | Dashboard y reportes |
 | `audit:view` | Historial de auditoría (Envers) |
-| `user:manage` | Gestión de usuarios (reservado admin) |
+| `user:manage` | Listado de usuarios en `/users` (solo lectura; altas/roles en Keycloak) |
 
 ### Usuarios
 
@@ -132,6 +135,7 @@ Los “roles” de app son **permisos granulares** del cliente `inventory-api` (
 | `admin` | `admin` | los 7 permisos | Acceso completo (incluye historial Envers) |
 | `viewer` | `viewer` | `product:view`, `stock:view` | Solo lectura |
 | `stock-manager` | `stock-manager` | `product:view`, `stock:view`, `stock:manage` | Operar stock + ver productos |
+| `auditor` | `auditor` | `product:view`, `stock:view`, `audit:view` | Lectura + historial Envers (sin manage ni dashboard) |
 
 Los permisos se validan en la API (`@PreAuthorize`) y en el frontend (oculta acciones / rutas según rol).
 
@@ -297,15 +301,16 @@ Flujo cubierto por E2E: `frontend/e2e/helpers/login.spec.ts`
 ### Permisos por usuario (smoke UI)
 
 
-| Paso | `admin` | `viewer` | `stock-manager` |
-| ---- | ------- | -------- | --------------- |
-| Login en [http://localhost:3000](http://localhost:3000) | ✓ | ✓ | ✓ |
-| Ver productos | ✓ | ✓ | ✓ |
-| Crear / editar / eliminar productos | ✓ | ✗ | ✗ |
-| Historial de auditoría (Envers) | ✓ | ✗ | ✗ |
-| Ver `/stock` | ✓ | ✓ | ✓ |
-| Registrar movimiento de stock | ✓ | ✗ | ✓ |
-| Ver `/dashboard` | ✓ | ✗ | ✗ |
+| Paso | `admin` | `viewer` | `stock-manager` | `auditor` |
+| ---- | ------- | -------- | --------------- | --------- |
+| Login en [http://localhost:3000](http://localhost:3000) | ✓ | ✓ | ✓ | ✓ |
+| Ver productos | ✓ | ✓ | ✓ | ✓ |
+| Crear / editar / eliminar productos | ✓ | ✗ | ✗ | ✗ |
+| Historial de auditoría (Envers) | ✓ | ✗ | ✗ | ✓ |
+| Ver `/stock` | ✓ | ✓ | ✓ | ✓ |
+| Registrar movimiento de stock | ✓ | ✗ | ✓ | ✗ |
+| Ver `/dashboard` | ✓ | ✗ | ✗ | ✗ |
+| Ver `/users` | ✓ | ✗ | ✗ | ✗ |
 
 Para probar otro usuario: cerrar sesión y volver a entrar (p. ej. `viewer` / `viewer`).
 
@@ -414,6 +419,11 @@ Variables de entorno (ver `docker-compose.yml`):
 
 En Grafana (datasources provisionados): **Prometheus**, **Tempo** y **Loki**, con enlace Trace ↔ Log vía `traceId`.
 
+Dashboard unificado (métricas + logs + trazas en un solo sitio, sin Explore):
+
+- Carpeta **Observabilidad** → **Observabilidad — Métricas, Logs y Trazas**
+- Archivo: [`infra/grafana/dashboards/observability.json`](infra/grafana/dashboards/observability.json)
+
 ### Cómo verificar trazas y logs
 
 1. Genera tráfico autenticado:
@@ -424,8 +434,11 @@ En Grafana (datasources provisionados): **Prometheus**, **Tempo** y **Loki**, co
      | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
    curl -sf -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v1/products?size=5" >/dev/null
    ```
-2. Grafana → Explore → **Tempo**: Search por service `inventory-api` (o `proyecto-qa`).
-3. Grafana → Explore → **Loki**: `{job="inventory-api"}` — busca líneas con `[traceId,spanId]`.
+2. Grafana → **Dashboards** → carpeta **Observabilidad** → **Observabilidad — Métricas, Logs y Trazas**
+   - Arriba: Prometheus (req/s, latencia, 5xx/401)
+   - Medio: Loki (`{job="inventory-api"}` + panel ERROR)
+   - Abajo: Tempo (trazas de `inventory-api` — clic para el waterfall)
+3. Opcional — Explore: Tempo Search / Loki `{job="inventory-api"}` si quieren profundizar.
 4. Ya no deberían aparecer `UnknownHostException: alloy` en los logs de la API.
 
 ### Alertas (Alertmanager — OBS-03)

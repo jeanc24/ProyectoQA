@@ -26,7 +26,7 @@ Verificar que la **matriz de permisos** se refleja en la UI (menú, formularios,
 **No incluye**
 
 - Consola de administración Keycloak
-- `user:manage` (sin UI dedicada en el frontend actual)
+- `user:manage` (UI `/users`: listado de solo lectura; altas/roles en Keycloak)
 - API con JWT a mano (salvo duda; la evidencia principal es UI)
 
 ## Matriz esperada (README)

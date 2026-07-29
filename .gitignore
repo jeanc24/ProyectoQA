@@ -7,9 +7,11 @@ build/
 .env
 .env.staging
 .env.production
+.env.security
 !.env.example
 !.env.staging.example
 !.env.production.example
+!.env.security.example
 
 ### STS ###
 .apt_generated

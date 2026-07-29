@@ -7,11 +7,19 @@
 #   ./scripts/k6-run.sh stress
 #   ./scripts/k6-run.sh all
 #
-# Vars opcionales: BASE_URL, KEYCLOAK_URL, K6_USERNAME, K6_PASSWORD
+# Vars opcionales: BASE_URL, KEYCLOAK_URL, KEYCLOAK_CLIENT_SECRET, K6_USERNAME, K6_PASSWORD
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+if [[ -f "$ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$ROOT/.env"
+  set +a
+fi
+# shellcheck source=lib/load-env.sh
+source "$ROOT/scripts/lib/load-env.sh"
 OUT="$ROOT/docs/final/testing/k6"
 MODE="${1:-load}"
 K6_IMAGE="${K6_IMAGE:-grafana/k6:0.54.0}"
@@ -55,11 +63,13 @@ fetch_host_token() {
   local kc_url="${KEYCLOAK_TOKEN_URL:-http://localhost:8081}"
   local user="${K6_USERNAME:-viewer}"
   local pass="${K6_PASSWORD:-viewer}"
-  curl -sf -X POST "$kc_url/realms/inventory/protocol/openid-connect/token" \
+  local client_id="${KEYCLOAK_CLIENT_ID}"
+  local client_secret="${KEYCLOAK_CLIENT_SECRET}"
+  curl -sf -X POST "$kc_url/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "grant_type=password" \
-    -d "client_id=inventory-api" \
-    -d "client_secret=inventory-api-secret" \
+    -d "client_id=$client_id" \
+    -d "client_secret=$client_secret" \
     -d "username=$user" \
     -d "password=$pass" \
     | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])"
@@ -94,6 +104,9 @@ run_one() {
     "${DOCKER_EXTRA[@]}" \
     -e BASE_URL="$BASE_URL" \
     -e KEYCLOAK_URL="$KEYCLOAK_URL" \
+    -e KEYCLOAK_REALM="${KEYCLOAK_REALM}" \
+    -e KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID}" \
+    -e KEYCLOAK_CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET}" \
     -e K6_OUT_DIR=docs/final/testing/k6 \
     -e K6_USERNAME="${K6_USERNAME:-viewer}" \
     -e K6_PASSWORD="${K6_PASSWORD:-viewer}" \

@@ -15,6 +15,11 @@ spring:
 app:
   keycloak:
     client-id: ${KEYCLOAK_CLIENT_ID:inventory-api}
+    realm: ${KEYCLOAK_REALM:inventory}
+    admin-server-url: ${KEYCLOAK_ADMIN_SERVER_URL:http://keycloak:8080}
+    admin-realm: ${KEYCLOAK_ADMIN_REALM:master}
+    admin-username: ${KEYCLOAK_ADMIN}
+    admin-password: ${KEYCLOAK_ADMIN_PASSWORD}
 
 logging:
   level:

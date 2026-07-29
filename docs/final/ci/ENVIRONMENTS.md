@@ -5,9 +5,9 @@
 | Aspecto | Dev (`docker` / local) | Staging (`staging`) | Production (`prod`) |
 | ------- | ---------------------- | ------------------- | ------------------- |
 | Compose | `docker-compose.yml` | `docker-compose.staging.yml` | `docker-compose.prod.yml` (opcional) |
-| Env file | `.env` | `.env.staging` | `.env.production` |
+| Env file | `.env` (desde `.env.example`) | `.env.staging` | `.env.production` |
 | Perfil Spring | `docker` / `local` | `staging` | `prod` |
-| Secrets en git | No (`.env` gitignored) | No | No |
+| Secrets en git | No (`.env` gitignored; compose usa `${VAR}`) | No | No |
 | Swagger UI | Sí | Sí | **No** |
 | Actuator | health, info, prometheus, metrics | Igual (base) | **health + prometheus** (configurable) |
 | Logging | INFO | INFO | **WARN** root / INFO app |
@@ -15,6 +15,38 @@
 | Puertos host (API/FE/KC) | 8080 / 3000 / 8081 | 8088 / 3008 / 8181 | 8089 / 3009 / 8182 |
 | Postgres publicado | Sí (red) | Sí | **127.0.0.1** only |
 | Seguridad HTTP | `DockerSecurityConfig` | `DockerSecurityConfig` | `DockerSecurityConfig` (prod: sin Swagger en permitAll) |
+
+## Development
+
+```bash
+cp .env.example .env
+docker compose --env-file .env up -d --build
+```
+
+Postgres, Keycloak, Grafana, CORS, Vite y OTel se leen desde `.env` (mismo patrón que staging/prod). Valores demo en `.env.example`; tokens personales (`NVD_API_KEY`, `SONAR_TOKEN`) solo en tu `.env` local.
+
+## Política de secretos
+
+| Capa | Qué hacer |
+| ---- | --------- |
+| **Git** | Nunca `.env`, `.env.staging`, `.env.production`, `.env.security` (gitignored). Solo `*.example`. |
+| **Demo local / CI académico** | Defaults en [`.env.example`](../../../.env.example) + [`keycloak/inventory-realm.json`](../../../keycloak/inventory-realm.json). Scripts cargan vía [`scripts/lib/load-env.sh`](../../../scripts/lib/load-env.sh). |
+| **GitHub Actions** | Opcional: Secrets `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`. Si están vacíos, `load-env.sh` usa demo. Obligatorios: `SONAR_TOKEN`, `NVD_API_KEY` (este último opcional). |
+| **Jenkins** | Credenciales `SONAR_TOKEN` / `NVD_API_KEY`; Keycloak desde `.env.security`. |
+| **Producción** | Rotar *todos* los `change-me-*`, no reutilizar el secret del realm demo, Keycloak en modo `start`, secrets en vault/PaaS. |
+| **Tests** | Gradle inyecta `.env` en la JVM de test (`build.gradle`). Sin `.env`: `cp .env.example .env`. No hay clase Java con secretos demo. |
+| **Postman/Newman** | [`post-deploy-smoke.collection.json`](post-deploy-smoke.collection.json): `clientSecret` / users vacíos → rellenar en Environment local, no en el JSON versionado. |
+
+El client secret del realm importado **tiene** que vivir en `inventory-realm.json` para que Keycloak `--import-realm` funcione sin un paso extra de provisioning. Eso es aceptable en demo; en producción el realm no se versiona con secretos reales.
+
+Stack aislado para ZAP/smoke (Jenkins):
+
+```bash
+cp .env.security.example .env.security
+docker compose -f docker-compose.security.yml --env-file .env.security up -d --build
+```
+
+Perfiles Spring `local` / `docker` también leen `SPRING_DATASOURCE_*`, `POSTGRES_*`, `KEYCLOAK_*` y `CORS_ORIGINS` (defaults demo si no hay env).
 
 ## Staging (ENV-01)
 
