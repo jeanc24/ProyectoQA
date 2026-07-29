@@ -27,7 +27,11 @@ El pipeline DevSecOps sigue levantando staging **efímero en el runner** (prueba
 | API | `inventory-api-prod` | free |
 | Keycloak | `inventory-keycloak-prod` | free |
 
-> Keycloak en free tier a menudo se queda corto de RAM. Si el deploy falla o reinicia en loop, subir a **starter**.
+> **Keycloak en plan free (512 MB):** es justo (Red Hat recomienda ≥750 MB). La imagen
+> usa `start --optimized`, Postgres, `--cache=local`, heap **192 m**, SerialGC y caches
+> pequeños. El OOM al login venía de `start-dev` + heap alto (384 m) + non-heap > 512 MB.
+> Tras mergear, sincronizar Blueprint / Manual Deploy y fijar `DATABASE_URL` + `KC_START_CMD=start`.
+> Si aún OOM en free puro, no hay más margen realista sin bajar de Keycloak.
 
 ### Vercel
 

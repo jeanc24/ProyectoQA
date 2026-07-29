@@ -51,19 +51,25 @@ services:
   - type: web
     name: inventory-keycloak-staging
     runtime: docker
+    # Plan free (512MB) obligatorio curso. Ajuste: optimized + Postgres + heap 192m + cache=local.
     plan: free
     branch: develop
     region: oregon
     dockerfilePath: ./infra/keycloak/Dockerfile
     dockerContext: .
-    healthCheckPath: /realms/inventory
+    healthCheckPath: /realms/master
     autoDeployTrigger: commit
     envVars:
       - key: KEYCLOAK_ADMIN
         sync: false
       - key: KEYCLOAK_ADMIN_PASSWORD
         sync: false
-      # Debe coincidir con la URL pública https://inventory-keycloak-staging.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventory-staging-db
+          property: connectionString
+      - key: KC_DB
+        value: postgres
       - key: KC_HOSTNAME
         sync: false
       - key: KC_HOSTNAME_STRICT
@@ -72,8 +78,21 @@ services:
         value: "true"
       - key: KC_PROXY_HEADERS
         value: xforwarded
+      - key: KC_CACHE
+        value: local
+      - key: KC_CACHE_EMBEDDED_SESSIONS_MAX_COUNT
+        value: "100"
+      - key: KC_CACHE_EMBEDDED_CLIENT_SESSIONS_MAX_COUNT
+        value: "100"
+      - key: KC_CACHE_EMBEDDED_USERS_MAX_COUNT
+        value: "100"
+      # Heap bajo a propósito: 384m + non-heap > 512MB → OOM al login.
+      - key: JAVA_OPTS_KC_HEAP
+        value: "-Xms32m -Xmx192m -XX:MaxRAMPercentage=40 -XX:InitialRAMPercentage=15"
+      - key: JAVA_OPTS_APPEND
+        value: "-XX:+UseSerialGC -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m"
       - key: KC_START_CMD
-        value: start-dev
+        value: start
 
 databases:
   - name: inventory-staging-db
