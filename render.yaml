@@ -51,18 +51,27 @@ services:
   - type: web
     name: inventory-keycloak-staging
     runtime: docker
+    # free (512MB) + start-dev → exit 137 (OOM). Imagen --optimized + Postgres + heap bajo.
     plan: free
     branch: develop
     region: oregon
     dockerfilePath: ./infra/keycloak/Dockerfile
     dockerContext: .
-    healthCheckPath: /realms/inventory
+    # /realms/master responde 200 antes de importar inventory
+    healthCheckPath: /realms/master
     autoDeployTrigger: commit
     envVars:
       - key: KEYCLOAK_ADMIN
         sync: false
       - key: KEYCLOAK_ADMIN_PASSWORD
         sync: false
+      # Misma Postgres que la API (tablas Keycloak conviven con las de Spring).
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventory-staging-db
+          property: connectionString
+      - key: KC_DB
+        value: postgres
       # Debe coincidir con la URL pública https://inventory-keycloak-staging.onrender.com
       - key: KC_HOSTNAME
         sync: false
@@ -72,8 +81,13 @@ services:
         value: "true"
       - key: KC_PROXY_HEADERS
         value: xforwarded
+      - key: KC_HEALTH_ENABLED
+        value: "true"
+      - key: JAVA_OPTS_KC_HEAP
+        value: "-XX:MaxRAMPercentage=65 -Xms64m -Xmx384m"
+      # start --optimized (no start-dev): evita rebuild Quarkus en runtime.
       - key: KC_START_CMD
-        value: start-dev
+        value: start
 
 databases:
   - name: inventory-staging-db

@@ -27,7 +27,10 @@ El pipeline DevSecOps sigue levantando staging **efímero en el runner** (prueba
 | API | `inventory-api-prod` | free |
 | Keycloak | `inventory-keycloak-prod` | free |
 
-> Keycloak en free tier a menudo se queda corto de RAM. Si el deploy falla o reinicia en loop, subir a **starter**.
+> **Exit 137 / “No open ports” en Keycloak:** OOM en free (512 MB) con `start-dev`.
+> La imagen `infra/keycloak/Dockerfile` hace `kc.sh build` en build-time y arranca con
+> `start --optimized` + Postgres (`DATABASE_URL`) + heap acotado (`JAVA_OPTS_KC_HEAP`).
+> Si aún falla, subir el servicio Keycloak a **standard** (2 GB) en el dashboard.
 
 ### Vercel
 
