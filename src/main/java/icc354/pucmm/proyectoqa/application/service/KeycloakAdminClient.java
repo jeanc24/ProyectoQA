@@ -1,6 +1,7 @@
 package icc354.pucmm.proyectoqa.application.service;
 
 import icc354.pucmm.proyectoqa.domain.exception.KeycloakAdminException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -29,6 +30,7 @@ public class KeycloakAdminClient {
     private final String adminUsername;
     private final String adminPassword;
 
+    @Autowired
     public KeycloakAdminClient(
             @Value("${app.keycloak.admin-server-url}") String adminServerUrl,
             @Value("${app.keycloak.realm:inventory}") String realm,
