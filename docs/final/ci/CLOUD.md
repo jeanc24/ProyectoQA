@@ -34,7 +34,7 @@ El pipeline DevSecOps sigue levantando staging **efímero en el runner** (prueba
 
 | Ambiente | Proyecto sugerido | Root Directory | Branch |
 | -------- | ----------------- | -------------- | ------ |
-| Staging | `proyecto-qa` (o similar) | `frontend` | `develop` |
+| Staging | `proyecto-qastaging` | `frontend` | `develop` |
 | Prod | segundo proyecto o mismo con branch `main` | `frontend` | `main` |
 
 Env build (Vercel → Settings → Environment Variables):
@@ -56,7 +56,7 @@ SPA: [`frontend/vercel.json`](../../../frontend/vercel.json) (rewrite → `index
 2. API: `KEYCLOAK_ISSUER_URI`, JWKS, `KEYCLOAK_ADMIN_SERVER_URL`, `CORS_ORIGINS` = URL Vercel.
 3. Vercel: Root `frontend`, Vite, branch `develop`, vars `VITE_*`.
 4. Keycloak client `inventory-frontend`: Valid redirect URI exacta  
-   `https://proyecto-qa.vercel.app/*` (+ Web origin igual sin `/*`).  
+   `https://proyecto-qastaging.vercel.app/*` (+ Web origin igual sin `/*`).  
    El wildcard `*.vercel.app` a menudo **no** basta.
 
 ---
@@ -176,7 +176,7 @@ Frase para el profesor: *“Un Grafana central en el entorno de desarrollo/demo;
 
 ```bash
 curl -sf "$STAGING_API_URL/actuator/health"
-API_URL=... KEYCLOAK_URL=... CORS_ORIGIN=https://proyecto-qa.vercel.app ./scripts/post-deploy-smoke.sh
+API_URL=... KEYCLOAK_URL=... CORS_ORIGIN=https://proyecto-qastaging.vercel.app ./scripts/post-deploy-smoke.sh
 ```
 
 Login en el front Vercel con `admin` / `admin` (usuarios del realm importado).
