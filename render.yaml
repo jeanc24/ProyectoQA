@@ -51,7 +51,7 @@ services:
   - type: web
     name: inventory-keycloak-staging
     runtime: docker
-    # Plan free (512MB). JVM alineada a Blueprint de referencia del curso que ya arranca en free.
+    # Plan free (512MB). Heap vía JAVA_OPTS_APPEND; healthCheck en "/".
     plan: free
     branch: develop
     region: oregon
@@ -95,7 +95,7 @@ services:
         value: "true"
       - key: KC_CACHE
         value: local
-      # Misma receta que el equipo de referencia (sin UseSerialGC; heap via APPEND).
+      # Free tier: sin UseSerialGC (choca con G1 de Keycloak); sin JAVA_OPTS_KC_HEAP.
       - key: JAVA_OPTS_APPEND
         value: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m"
       - key: KC_START_CMD
