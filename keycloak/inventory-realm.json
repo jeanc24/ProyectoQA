@@ -87,6 +87,7 @@
         "http://localhost:3000/*",
         "http://localhost:3008/*",
         "http://localhost:3009/*",
+        "https://proyecto-qa.vercel.app/*",
         "https://*.vercel.app/*"
       ],
       "webOrigins": [
@@ -94,6 +95,7 @@
         "http://localhost:3000",
         "http://localhost:3008",
         "http://localhost:3009",
+        "https://proyecto-qa.vercel.app",
         "https://*.vercel.app"
       ],
       "attributes": {

@@ -1,11 +1,10 @@
 # Deploy cloud — Staging & Production (Render + Vercel)
 
-**Rama de trabajo:** `feature/cloud-deploy-staging-prod`  
 **Decisión:** FE en **Vercel**, API + Postgres + Keycloak en **Render**.  
 **Branches:** `develop` → staging · `main` → prod.  
 **Grafana:** **uno solo en Compose local** (no hay Grafana staging/prod en cloud).
 
-El pipeline DevSecOps sigue levantando staging **efímero en el runner** (prueba CI). Estos workflows despliegan ambientes **persistentes** en la nube.
+El pipeline DevSecOps sigue levantando staging **efímero en el runner** (prueba CI). Los workflows `deploy-staging.yml` / `deploy-prod.yml` disparan ambientes **persistentes** en la nube (hooks opcionales).
 
 ---
 
@@ -27,18 +26,16 @@ El pipeline DevSecOps sigue levantando staging **efímero en el runner** (prueba
 | API | `inventory-api-prod` | free |
 | Keycloak | `inventory-keycloak-prod` | free |
 
-> **Keycloak free (512 MB):** JVM alineada al Blueprint de referencia del curso que ya
-> funciona: `JAVA_OPTS_APPEND=-Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m` (sin
-> `JAVA_OPTS_KC_HEAP`, sin `UseSerialGC`), Postgres, `healthCheckPath: /`,
-> `KC_DB_USERNAME`/`PASSWORD` desde la DB. Tras mergear: **borrar** en el dashboard
-> `JAVA_OPTS_KC_HEAP` si quedó de deploys anteriores, y Manual Deploy.
+> **Keycloak free (512 MB):** `JAVA_OPTS_APPEND=-Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m`  
+> (sin `JAVA_OPTS_KC_HEAP`, sin `UseSerialGC`), Postgres, `healthCheckPath: /`,  
+> `KC_DB_USERNAME` / `PASSWORD` desde la DB. Si en el dashboard quedó `JAVA_OPTS_KC_HEAP`, bórralo y redespliega.
 
 ### Vercel
 
 | Ambiente | Proyecto sugerido | Root Directory | Branch |
 | -------- | ----------------- | -------------- | ------ |
-| Staging | `proyectoqa-staging` | `frontend` | `develop` |
-| Prod | `proyectoqa` | `frontend` | `main` |
+| Staging | `proyecto-qa` (o similar) | `frontend` | `develop` |
+| Prod | segundo proyecto o mismo con branch `main` | `frontend` | `main` |
 
 Env build (Vercel → Settings → Environment Variables):
 
@@ -53,61 +50,88 @@ SPA: [`frontend/vercel.json`](../../../frontend/vercel.json) (rewrite → `index
 
 ---
 
-## Setup manual (orden)
+## Setup staging (resumen)
 
-### 1. Render staging
+1. Blueprint Render → `render.yaml` / branch `develop`.
+2. API: `KEYCLOAK_ISSUER_URI`, JWKS, `KEYCLOAK_ADMIN_SERVER_URL`, `CORS_ORIGINS` = URL Vercel.
+3. Vercel: Root `frontend`, Vite, branch `develop`, vars `VITE_*`.
+4. Keycloak client `inventory-frontend`: Valid redirect URI exacta  
+   `https://proyecto-qa.vercel.app/*` (+ Web origin igual sin `/*`).  
+   El wildcard `*.vercel.app` a menudo **no** basta.
 
-1. [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**.
-2. Conectar repo `jeanc24/ProyectoQA`, branch `develop`, archivo `render.yaml`.
-3. Rellenar env `sync: false` cuando el wizard lo pida (puedes poner placeholders y editar después):
-   - Keycloak: `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` (fuertes).
-   - `KC_HOSTNAME` = URL pública final del servicio Keycloak (ej. `https://inventory-keycloak-staging.onrender.com`).
-4. Aplicar Blueprint → esperar Postgres + Keycloak + API.
-5. En **API**, fijar:
-   - `KEYCLOAK_ISSUER_URI` = misma URL pública de Keycloak + `/realms/inventory`
+---
+
+## Setup production (paso a paso)
+
+Producción es el **mismo patrón** que staging, con Blueprint y proyecto FE **separados**, branch **`main`**.
+
+### 1. Código en `main`
+
+1. Cuando staging esté estable: PR `develop` → `main` (o merge de release).
+2. Confirma que `infra/render/render.prod.yaml` está en `main`.
+
+### 2. Render production (Blueprint nuevo)
+
+1. Dashboard → **New** → **Blueprint**.
+2. Mismo repo; **Blueprint path** = `infra/render/render.prod.yaml`.
+3. Branch = **`main`**.
+4. Servicios esperados: `inventory-prod-db`, `inventory-api-prod`, `inventory-keycloak-prod`.
+5. Tras el primer deploy, anota URLs (pueden llevar sufijo si el nombre estaba ocupado), p. ej.:
+   - `https://inventory-keycloak-prod.onrender.com`
+   - `https://inventory-api-prod.onrender.com`
+6. En **Keycloak prod**:
+   - `KC_HOSTNAME` = URL pública de Keycloak prod.
+   - `JAVA_OPTS_APPEND=-Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m`
+   - Sin `JAVA_OPTS_KC_HEAP`.
+   - Admin: rellenar `KC_BOOTSTRAP_ADMIN_*` / `KEYCLOAK_ADMIN*` (en prod Blueprint van `sync: false`).
+7. En **API prod**:
+   - `KEYCLOAK_ISSUER_URI` = `https://<kc-prod>/realms/inventory`
    - `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI` =  
-     `https://<keycloak-public>/realms/inventory/protocol/openid-connect/certs`  
-     (o host interno de Render si prefieres red privada: `http://inventory-keycloak-staging:8080/...` — el **issuer** debe ser el público).
-   - `KEYCLOAK_ADMIN_SERVER_URL` = URL interna o pública de Keycloak (Admin API).
-   - `CORS_ORIGINS` = URL del front Vercel staging.
-6. Settings → **Deploy Hook** en API y Keycloak → guardar URLs en GitHub Secrets.
+     `https://<kc-prod>/realms/inventory/protocol/openid-connect/certs`
+   - `KEYCLOAK_ADMIN_SERVER_URL` = URL Keycloak prod
+   - `CORS_ORIGINS` = URL del front Vercel **prod** (paso 3)
+8. Keycloak Admin → client `inventory-frontend` → redirect URI del dominio Vercel **prod**  
+   (`https://<tu-proyecto-prod>.vercel.app/*`).
 
-### 2. Vercel staging
+### 3. Vercel production
 
-1. Importar repo → Root `frontend` → framework Vite.
-2. Variables `VITE_*` (tabla arriba).
-3. Deploy. Copiar URL (`*.vercel.app`) a `CORS_ORIGINS` en Render API y a GitHub var `STAGING_FRONTEND_URL`.
-4. El realm ya incluye `https://*.vercel.app/*` en redirect URIs / web origins.
+1. **New Project** (recomendado: proyecto aparte del de staging) → Root `frontend` → Vite.
+2. Production Branch = **`main`**.
+3. Environment variables (Production):
 
-### 3. GitHub (staging)
+| Variable | Valor |
+| -------- | ----- |
+| `VITE_API_URL` | URL API prod Render |
+| `VITE_KEYCLOAK_URL` | URL Keycloak prod Render |
+| `VITE_KEYCLOAK_REALM` | `inventory` |
+| `VITE_KEYCLOAK_CLIENT_ID` | `inventory-frontend` |
 
-**Variables (Settings → Variables):**
+4. Deploy → copiar URL → pegar en `CORS_ORIGINS` de la API prod → redeploy API.
+
+### 4. GitHub (prod)
+
+**Variables:**
 
 | Name | Ejemplo |
 | ---- | ------- |
-| `STAGING_API_URL` | `https://inventory-api-staging.onrender.com` |
-| `STAGING_KEYCLOAK_URL` | `https://inventory-keycloak-staging.onrender.com` |
-| `STAGING_FRONTEND_URL` | `https://proyectoqa-staging.vercel.app` |
+| `PROD_API_URL` | URL API prod |
+| `PROD_KEYCLOAK_URL` | URL Keycloak prod |
+| `PROD_FRONTEND_URL` | URL Vercel prod |
 
-**Secrets:**
+**Secrets:** `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_PROD`, hooks Render prod (opcional), credenciales Keycloak para smoke.
 
-| Name | Uso |
-| ---- | --- |
-| `VERCEL_TOKEN` | CLI |
-| `VERCEL_ORG_ID` | CLI |
-| `VERCEL_PROJECT_ID_STAGING` | CLI |
-| `RENDER_DEPLOY_HOOK_API_STAGING` | opcional |
-| `RENDER_DEPLOY_HOOK_KEYCLOAK_STAGING` | opcional |
-| `STAGING_KEYCLOAK_CLIENT_ID` | smoke (default `inventory-api`) |
-| `STAGING_KEYCLOAK_CLIENT_SECRET` | smoke (realm demo o el rotado) |
-| `STAGING_KEYCLOAK_ADMIN` / `_PASSWORD` | smoke admin / tokens |
+Workflow: [`.github/workflows/deploy-prod.yml`](../../../.github/workflows/deploy-prod.yml) (trigger: push a `main` + `workflow_dispatch`; environment GitHub `production`).
 
-### 4. Production (igual, archivo distinto)
+### 5. Verificación prod
 
-1. Blueprint con path `infra/render/render.prod.yaml`, branch `main`.
-2. Segundo proyecto Vercel (o production env del mismo).
-3. Secrets/vars con prefijo `PROD_*` y `VERCEL_PROJECT_ID_PROD`.
-4. Workflow: [`.github/workflows/deploy-prod.yml`](../../../.github/workflows/deploy-prod.yml) (environment GitHub `production`).
+```bash
+export API_URL="$PROD_API_URL"
+export KEYCLOAK_URL="$PROD_KEYCLOAK_URL"
+export CORS_ORIGIN="$PROD_FRONTEND_URL"
+./scripts/post-deploy-smoke.sh
+```
+
+Login en el front prod con usuarios demo del realm (`admin` / `admin`, etc.).
 
 ---
 
@@ -115,11 +139,11 @@ SPA: [`frontend/vercel.json`](../../../frontend/vercel.json) (rewrite → `index
 
 | Workflow | Trigger | Qué hace |
 | -------- | ------- | -------- |
-| [`deploy-staging.yml`](../../../.github/workflows/deploy-staging.yml) | push `develop` + manual | Hook Render + Vercel preview + smoke cloud |
+| [`deploy-staging.yml`](../../../.github/workflows/deploy-staging.yml) | push `develop` + manual | Hook Render + Vercel + smoke cloud |
 | [`deploy-prod.yml`](../../../.github/workflows/deploy-prod.yml) | push `main` + manual | Idem prod |
-| [`devsecops.yml`](../../../.github/workflows/devsecops.yml) | push/PR `develop` | CI + staging Compose **efímero** (sin cloud) |
+| [`devsecops.yml`](../../../.github/workflows/devsecops.yml) | push/PR `develop` | CI + staging Compose **efímero** (OBS/tests; sin cloud) |
 
-Si faltan secrets Vercel/Render, los jobs **avisan y no fallan** el pipeline (permite mergear la rama antes de crear las cuentas).
+Si faltan secrets Vercel/Render, los jobs **avisan y no fallan**.
 
 ---
 
@@ -133,7 +157,7 @@ KC_HOSTNAME=https://inventory-keycloak-staging.onrender.com
 KEYCLOAK_ISSUER_URI=https://inventory-keycloak-staging.onrender.com/realms/inventory
 ```
 
-Mismo patrón que el bug `localhost` vs `host.docker.internal` documentado en la defensa.
+Mismo patrón en prod con las URLs `-prod`.
 
 ---
 
@@ -142,21 +166,17 @@ Mismo patrón que el bug `localhost` vs `host.docker.internal` documentado en la
 | Ambiente | Observabilidad |
 | -------- | -------------- |
 | Local Compose | Prometheus + Loki + Tempo + **Grafana :3001** |
-| Staging / Prod cloud | Sin stack OBS (API puede dejar OTel off / sampling 0) |
+| Staging / Prod cloud | Sin stack OBS (API puede dejar OTel off / sampling bajo) |
 
 Frase para el profesor: *“Un Grafana central en el entorno de desarrollo/demo; tres Grafanas (dev/staging/prod) no aportan y no son viables en free tier.”*
 
 ---
 
-## Verificación rápida
+## Verificación rápida (staging)
 
 ```bash
-# Health API staging
 curl -sf "$STAGING_API_URL/actuator/health"
-
-# Token + products
-./scripts/wait-for-stack.sh   # con API_URL y KEYCLOAK_URL cloud
-./scripts/post-deploy-smoke.sh
+API_URL=... KEYCLOAK_URL=... CORS_ORIGIN=https://proyecto-qa.vercel.app ./scripts/post-deploy-smoke.sh
 ```
 
 Login en el front Vercel con `admin` / `admin` (usuarios del realm importado).

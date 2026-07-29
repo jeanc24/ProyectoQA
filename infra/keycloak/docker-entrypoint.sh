@@ -1,13 +1,12 @@
 #!/bin/sh
-# Render free (512MB). Receta alineada con Blueprint que ya funciona en el curso:
-#   JAVA_OPTS_APPEND="-Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m" (sin UseSerialGC, sin JAVA_OPTS_KC_HEAP)
+# Render free (512MB): heap vía JAVA_OPTS_APPEND (sin UseSerialGC, sin JAVA_OPTS_KC_HEAP).
 set -eu
 
 PORT="${PORT:-8080}"
 export KC_HTTP_PORT="$PORT"
 export KC_HTTP_HOST="${KC_HTTP_HOST:-0.0.0.0}"
 
-# No fijar JAVA_OPTS_KC_HEAP: Keycloak calcula heap; APPEND fija tope como el Blueprint de referencia.
+# No fijar JAVA_OPTS_KC_HEAP: Keycloak trae defaults de heap; APPEND fija tope para free tier.
 export JAVA_OPTS_APPEND="${JAVA_OPTS_APPEND:--Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m}"
 
 export KC_CACHE="${KC_CACHE:-local}"
