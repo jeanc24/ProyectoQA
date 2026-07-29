@@ -6,18 +6,15 @@ PORT="${PORT:-8080}"
 export KC_HTTP_PORT="$PORT"
 export KC_HTTP_HOST="${KC_HTTP_HOST:-0.0.0.0}"
 
-# En 512MB el non-heap (~150–250MB) come mucho: heap alto (384m) → OOM al login.
-# Dejar ~300MB libres fuera del heap.
-export JAVA_OPTS_KC_HEAP="${JAVA_OPTS_KC_HEAP:--Xms32m -Xmx192m -XX:MaxRAMPercentage=40 -XX:InitialRAMPercentage=15}"
-# No cambiar el GC: Keycloak ya fija G1; UseSerialGC → "Multiple garbage collectors selected".
-export JAVA_OPTS_APPEND="${JAVA_OPTS_APPEND:--XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=48m}"
+# Presupuesto ~512MB: Liquibase del 1er boot necesita Metaspace alto.
+# MaxMetaspaceSize=96m → OutOfMemoryError: Metaspace a mitad del schema.
+# Heap 128m deja ~380m para metaspace/native/code-cache.
+export JAVA_OPTS_KC_HEAP="${JAVA_OPTS_KC_HEAP:--Xms32m -Xmx128m}"
+# No tocar el GC (Keycloak ya usa G1). Metaspace generoso para el primer liquibase.
+export JAVA_OPTS_APPEND="${JAVA_OPTS_APPEND:--XX:MaxMetaspaceSize=168m -XX:MetaspaceSize=96m}"
 
-# Caches embebidos pequeños (single-node demo).
+# Single-node. No limitar caches de sessions si persistent-user-sessions está off.
 export KC_CACHE="${KC_CACHE:-local}"
-export KC_CACHE_EMBEDDED_SESSIONS_MAX_COUNT="${KC_CACHE_EMBEDDED_SESSIONS_MAX_COUNT:-100}"
-export KC_CACHE_EMBEDDED_CLIENT_SESSIONS_MAX_COUNT="${KC_CACHE_EMBEDDED_CLIENT_SESSIONS_MAX_COUNT:-100}"
-export KC_CACHE_EMBEDDED_OFFLINE_SESSIONS_MAX_COUNT="${KC_CACHE_EMBEDDED_OFFLINE_SESSIONS_MAX_COUNT:-50}"
-export KC_CACHE_EMBEDDED_OFFLINE_CLIENT_SESSIONS_MAX_COUNT="${KC_CACHE_EMBEDDED_OFFLINE_CLIENT_SESSIONS_MAX_COUNT:-50}"
 export KC_CACHE_EMBEDDED_USERS_MAX_COUNT="${KC_CACHE_EMBEDDED_USERS_MAX_COUNT:-100}"
 export KC_CACHE_EMBEDDED_REALMS_MAX_COUNT="${KC_CACHE_EMBEDDED_REALMS_MAX_COUNT:-10}"
 
