@@ -92,4 +92,54 @@ test.describe("Permissions by role", () => {
     await expect(page.getByTestId("product-audit-panel")).toBeVisible();
     await expect(page.getByTestId("audit-history-table")).toBeVisible();
   });
+
+  test("admin can open users directory; viewer cannot", async ({ page }) => {
+    await loginAs(page, "admin");
+    await expect(page.getByTestId("nav-users")).toBeVisible();
+    await page.getByTestId("nav-users").click();
+    await expect(page).toHaveURL(/\/users$/);
+    await expect(page.getByTestId("users-keycloak-note")).toBeVisible();
+    await expect(page.getByTestId("users-table")).toBeVisible();
+    await expect(page.getByText("admin", { exact: true }).first()).toBeVisible();
+
+    await loginAs(page, "viewer");
+    await expect(page.getByTestId("nav-users")).toHaveCount(0);
+    await page.goto("/users");
+    await expect(page).toHaveURL(/\/unauthorized$/);
+  });
+
+  test("auditor sees Historial; cannot open dashboard", async ({ page, request }) => {
+    const adminToken = await getAccessToken(request, "admin");
+    const product = await createProductViaApi(request, adminToken, {
+      name: `Auditor UI ${Date.now()}`,
+    });
+
+    await loginAs(page, "auditor");
+    await expect(page.getByTestId("create-product-button")).toHaveCount(0);
+    await expect(page.getByTestId("nav-dashboard")).toHaveCount(0);
+    await expect(page.getByTestId("nav-users")).toHaveCount(0);
+
+    await page.getByTestId("products-search").fill(product.name);
+    await page.getByTestId("products-search-button").click();
+    await expect(page.getByTestId("audit-history-button").first()).toBeVisible();
+
+    await page.goto("/dashboard");
+    await expect(page).toHaveURL(/\/unauthorized$/);
+  });
+
+  test("viewer gets 403 on GET /api/v1/users", async ({ request }) => {
+    const viewerToken = await getAccessToken(request, "viewer");
+    const res = await request.get(`${API_BASE}/api/v1/users`, {
+      headers: { Authorization: `Bearer ${viewerToken}` },
+    });
+    expect(res.status()).toBe(403);
+
+    const adminToken = await getAccessToken(request, "admin");
+    const adminRes = await request.get(`${API_BASE}/api/v1/users`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(adminRes.status()).toBe(200);
+    const users = (await adminRes.json()) as { username: string }[];
+    expect(users.some((u) => u.username === "admin")).toBe(true);
+  });
 });

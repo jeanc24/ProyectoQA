@@ -15,7 +15,7 @@ Inventario de **todas** las pruebas del repositorio: automatizadas, scripts de s
 | API scenarios (`@Tag("api")`) | MockMvc + `@WithMockUser` | **31** métodos | `./gradlew apiTest` |
 | Contract (`@Tag("contract")`) | JUnit + OpenAPI / Newman paths | **2** métodos | `./gradlew contractTest` |
 | Integration (`@Tag("integration")`) | Testcontainers (Postgres ± Keycloak) | **26** métodos | `./gradlew integrationTest` |
-| E2E | Playwright (Chromium) | **9** tests | `cd frontend && npm run test:e2e` |
+| E2E | Playwright (Chromium) | **12** tests | `cd frontend && npm run test:e2e` |
 | Performance | k6 | **2** scripts (load + stress) | `./scripts/k6-run.sh load\|stress\|all` |
 | Security smoke (JWT/CORS/permisos) | bash + curl | **1** script (varios asserts) | `./scripts/security-smoke.sh` |
 | Post-deploy smoke | bash + curl | **1** script | `./scripts/post-deploy-smoke.sh` |
@@ -25,7 +25,7 @@ Inventario de **todas** las pruebas del repositorio: automatizadas, scripts de s
 | Exploratorio (manual) | Charters EX-01…03 | **3** charters + evidencias | Ver [exploratory/](exploratory/) |
 
 **Total métodos JUnit automatizados:** 36 + 31 + 2 + 26 = **95**  
-**Total E2E Playwright:** **9**  
+**Total E2E Playwright:** **12**  
 **Scripts no-JUnit de verificación:** k6 (2) + smokes (2) + ZAP + Dependency-Check
 
 Tags Gradle (`build.gradle`):
@@ -247,7 +247,7 @@ Requieren **Docker**. Tag `integration` (en `AbstractIntegrationTest`).
 
 ---
 
-## 6. E2E Playwright — `cd frontend && npm run test:e2e` (9)
+## 6. E2E Playwright — `cd frontend && npm run test:e2e` (12)
 
 Requiere stack (FE + API + Keycloak). Config: `frontend/playwright.config.ts`. Helpers: `frontend/e2e/helpers/auth.ts`.
 
@@ -262,6 +262,9 @@ Requiere stack (FE + API + Keycloak). Config: `frontend/playwright.config.ts`. H
 | 7 | `permissions.spec.ts` | viewer gets 403 on product:manage and audit:view APIs | API 403 |
 | 8 | `permissions.spec.ts` | admin can read product audit history (audit:view) | Audit admin |
 | 9 | `permissions.spec.ts` | admin UI shows Historial; viewer does not | UI Historial por rol |
+| 10 | `permissions.spec.ts` | admin can open users directory; viewer cannot | UI `/users` + Keycloak note |
+| 11 | `permissions.spec.ts` | auditor sees Historial; cannot open dashboard | Rol `auditor` |
+| 12 | `permissions.spec.ts` | viewer gets 403 on GET /api/v1/users | API `user:manage` |
 
 Evidencias: [`e2e/evidencias/`](e2e/evidencias/).
 
@@ -411,7 +414,7 @@ API_URL=http://localhost:8088 KEYCLOAK_URL=http://localhost:8181 ./scripts/post-
 | Pregunta típica | Respuesta corta |
 |-----------------|-----------------|
 | ¿Cuántos tests JUnit? | **95** métodos (`test`+`api`+`contract`+`integration`) |
-| ¿Cuántos E2E? | **9** Playwright |
+| ¿Cuántos E2E? | **12** Playwright |
 | ¿Herramientas de testing? | JUnit, Mockito, MockMvc, Testcontainers, Playwright, k6, ZAP, Dependency-Check, smokes curl, Sonar/JaCoCo, exploratorio |
 | ¿Qué no usamos del PDF? | Cucumber, RestAssured, JMeter (equivalentes MockMvc + k6) |
 

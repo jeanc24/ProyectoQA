@@ -1,9 +1,8 @@
-# local profile: development without keycloak (OAuth2 activates in the docker profile)
-# To run in local use the command bootrun with the argument "--spring.profiles.active=local"
-
-# .\gradlew bootRun --args="--spring.profiles.active=local"
+# Perfil `local`: desarrollo sin Keycloak (OAuth2 entra con el perfil docker).
+#   ./gradlew bootRun --args="--spring.profiles.active=local"
+# Secretos/URL vía env (.env o export); defaults = demo en Postgres host :5433.
 spring:
   datasource:
-    url: jdbc:postgresql://127.0.0.1:5433/inventory
-    username: inventory
-    password: inventory
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5433/inventory}
+    username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:inventory}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD:inventory}}

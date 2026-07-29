@@ -8,6 +8,7 @@ export const BASE_URL = __ENV.BASE_URL || 'http://host.docker.internal:8080';
 export const KEYCLOAK_URL = __ENV.KEYCLOAK_URL || 'http://host.docker.internal:8081';
 export const REALM = __ENV.KEYCLOAK_REALM || 'inventory';
 export const CLIENT_ID = __ENV.KEYCLOAK_CLIENT_ID || 'inventory-api';
+/** Demo fallback aligned with keycloak/inventory-realm.json; override via KEYCLOAK_CLIENT_SECRET. */
 export const CLIENT_SECRET = __ENV.KEYCLOAK_CLIENT_SECRET || 'inventory-api-secret';
 export const USERNAME = __ENV.K6_USERNAME || 'viewer';
 export const PASSWORD = __ENV.K6_PASSWORD || 'viewer';

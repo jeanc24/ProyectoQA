@@ -7,6 +7,10 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
+/**
+ * Base IT con Postgres efímero (Testcontainers).
+ * User/password del contenedor son locales al test — no son secretos de la app.
+ */
 @SpringBootTest
 @ActiveProfiles("integration")
 @Tag("integration")

@@ -2,6 +2,7 @@ package icc354.pucmm.proyectoqa.controller;
 
 import icc354.pucmm.proyectoqa.domain.exception.DuplicateSkuException;
 import icc354.pucmm.proyectoqa.domain.exception.InsufficientStockException;
+import icc354.pucmm.proyectoqa.domain.exception.KeycloakAdminException;
 import icc354.pucmm.proyectoqa.domain.exception.ResourceNotFoundException;
 import icc354.pucmm.proyectoqa.dto.ErrorResponse;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -78,6 +79,16 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT.value(),
                 "Conflict",
                 "Data integrity violation"
+        );
+    }
+
+    @ExceptionHandler(KeycloakAdminException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handleKeycloakAdmin(KeycloakAdminException ex) {
+        return ErrorResponse.of(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Service Unavailable",
+                ex.getMessage()
         );
     }
 }

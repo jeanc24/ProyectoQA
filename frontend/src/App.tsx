@@ -5,6 +5,7 @@ import TechGuide from "./pages/TechGuide";
 import Products from "./pages/Products";
 import Dashboard from "./pages/Dashboard";
 import Stock from "./pages/Stock";
+import Users from "./pages/Users";
 import Unauthorized from "./components/Unauthorized.tsx";
 import { PERMISSIONS } from "./auth/permissions";
 
@@ -45,6 +46,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole={PERMISSIONS.reportView}>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute requiredRole={PERMISSIONS.userManage}>
+              <Users />
             </ProtectedRoute>
           }
         />

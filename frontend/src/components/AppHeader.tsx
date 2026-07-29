@@ -15,6 +15,7 @@ export default function AppHeader({ title, subtitle, actions }: Props) {
   const canViewProducts = hasRole(PERMISSIONS.productView);
   const canViewStock = hasRole(PERMISSIONS.stockView);
   const canViewDashboard = hasRole(PERMISSIONS.reportView);
+  const canManageUsers = hasRole(PERMISSIONS.userManage);
 
   return (
     <header className="app-header">
@@ -70,6 +71,17 @@ export default function AppHeader({ title, subtitle, actions }: Props) {
             }
           >
             Dashboard
+          </NavLink>
+        )}
+        {canManageUsers && (
+          <NavLink
+            to="/users"
+            data-testid="nav-users"
+            className={({ isActive }) =>
+              isActive ? "app-nav-link active" : "app-nav-link"
+            }
+          >
+            Usuarios
           </NavLink>
         )}
       </nav>

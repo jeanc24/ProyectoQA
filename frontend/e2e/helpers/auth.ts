@@ -2,18 +2,36 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL ?? "http://localhost:8081";
+const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM ?? "inventory";
 const KEYCLOAK_TOKEN_URL =
   process.env.KEYCLOAK_TOKEN_URL ??
-  `${KEYCLOAK_URL}/realms/inventory/protocol/openid-connect/token`;
+  `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`;
 const API_BASE = process.env.API_BASE ?? "http://localhost:8080";
+const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? "inventory-api";
+/** Fallback demo — debe coincidir con keycloak/inventory-realm.json. Preferir env en CI. */
+const KEYCLOAK_CLIENT_SECRET =
+  process.env.KEYCLOAK_CLIENT_SECRET ?? "inventory-api-secret";
 
-export type DemoUser = "admin" | "viewer" | "stock-manager";
+export type DemoUser = "admin" | "viewer" | "stock-manager" | "auditor";
 
-/** Usuarios demo del realm Keycloak (password = username). */
+/** Usuarios demo del realm Keycloak (password = username salvo override por env). */
 export const DEMO_USERS: Record<DemoUser, { username: string; password: string }> = {
-  admin: { username: "admin", password: "admin" },
-  viewer: { username: "viewer", password: "viewer" },
-  "stock-manager": { username: "stock-manager", password: "stock-manager" },
+  admin: {
+    username: process.env.E2E_ADMIN_USER ?? "admin",
+    password: process.env.E2E_ADMIN_PASSWORD ?? "admin",
+  },
+  viewer: {
+    username: process.env.E2E_VIEWER_USER ?? "viewer",
+    password: process.env.E2E_VIEWER_PASSWORD ?? "viewer",
+  },
+  "stock-manager": {
+    username: process.env.E2E_STOCK_MANAGER_USER ?? "stock-manager",
+    password: process.env.E2E_STOCK_MANAGER_PASSWORD ?? "stock-manager",
+  },
+  auditor: {
+    username: process.env.E2E_AUDITOR_USER ?? "auditor",
+    password: process.env.E2E_AUDITOR_PASSWORD ?? "auditor",
+  },
 };
 
 /**
@@ -53,8 +71,8 @@ export async function getAccessToken(
   const response = await request.post(KEYCLOAK_TOKEN_URL, {
     form: {
       grant_type: "password",
-      client_id: "inventory-api",
-      client_secret: "inventory-api-secret",
+      client_id: KEYCLOAK_CLIENT_ID,
+      client_secret: KEYCLOAK_CLIENT_SECRET,
       username,
       password,
     },

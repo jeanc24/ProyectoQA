@@ -20,10 +20,13 @@ import java.util.Map;
 /**
  * Base para integration tests de seguridad con Keycloak real (TEST-01).
  *
- * <p>Estrategia: Postgres (heredado) + Keycloak Testcontainers importando
+ * <p>Postgres (heredado) + Keycloak Testcontainers importando
  * {@code keycloak/inventory-realm.json}. El perfil {@code docker} activa
- * {@link icc354.pucmm.proyectoqa.config.DockerSecurityConfig} (JWT + @PreAuthorize).
- * Los demás IT de servicio siguen solo con perfil {@code integration} (sin HTTP/JWT).
+ * {@link icc354.pucmm.proyectoqa.config.DockerSecurityConfig}.
+ *
+ * <p>El client secret del password grant sale de {@code KEYCLOAK_CLIENT_SECRET}
+ * (y {@code KEYCLOAK_CLIENT_ID}), vía entorno / {@code .env} inyectado por Gradle.
+ * Debe coincidir con el secret del realm importado.
  *
  * <p>Requiere Docker. En CI: {@code ./gradlew integrationTest}.
  */
@@ -33,11 +36,15 @@ public abstract class AbstractKeycloakIntegrationTest extends AbstractIntegratio
 
     private static final int KEYCLOAK_PORT = 8080;
 
+    /** Solo para la consola admin del contenedor efímero (no es el usuario demo del realm). */
+    private static final String CONTAINER_ADMIN_USER = "kc-it-admin";
+    private static final String CONTAINER_ADMIN_PASSWORD = "kc-it-admin";
+
     @SuppressWarnings("resource")
     static final GenericContainer<?> KEYCLOAK = new GenericContainer<>("quay.io/keycloak/keycloak:26.0")
             .withExposedPorts(KEYCLOAK_PORT)
-            .withEnv("KEYCLOAK_ADMIN", "admin")
-            .withEnv("KEYCLOAK_ADMIN_PASSWORD", "admin")
+            .withEnv("KEYCLOAK_ADMIN", CONTAINER_ADMIN_USER)
+            .withEnv("KEYCLOAK_ADMIN_PASSWORD", CONTAINER_ADMIN_PASSWORD)
             .withEnv("KC_HTTP_PORT", String.valueOf(KEYCLOAK_PORT))
             .withCommand("start-dev", "--import-realm")
             .withCopyFileToContainer(
@@ -62,18 +69,24 @@ public abstract class AbstractKeycloakIntegrationTest extends AbstractIntegratio
                 AbstractKeycloakIntegrationTest::issuerUri);
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri",
                 AbstractKeycloakIntegrationTest::jwkSetUri);
-        // Evitar CORS / OTel noise
         registry.add("app.cors.allowed-origins", () -> "http://localhost:3000");
+        // Admin REST de la app apunta al Keycloak del test (list users, etc. si algún IT lo usa)
+        registry.add("app.keycloak.admin-server-url", AbstractKeycloakIntegrationTest::keycloakBaseUrl);
+        registry.add("app.keycloak.admin-username", () -> CONTAINER_ADMIN_USER);
+        registry.add("app.keycloak.admin-password", () -> CONTAINER_ADMIN_PASSWORD);
+        registry.add("app.keycloak.client-id", AbstractKeycloakIntegrationTest::clientId);
+    }
+
+    protected static String keycloakBaseUrl() {
+        return "http://" + KEYCLOAK.getHost() + ":" + KEYCLOAK.getMappedPort(KEYCLOAK_PORT);
     }
 
     /**
      * Usa {@link GenericContainer#getHost()} (respeta TESTCONTAINERS_HOST_OVERRIDE)
-     * en vez de hardcodear localhost: desde Jenkins-en-Docker, localhost no alcanza
-     * el Keycloak publicado en el daemon del host.
+     * en vez de hardcodear localhost.
      */
     protected static String issuerUri() {
-        return "http://" + KEYCLOAK.getHost() + ":" + KEYCLOAK.getMappedPort(KEYCLOAK_PORT)
-                + "/realms/inventory";
+        return keycloakBaseUrl() + "/realms/inventory";
     }
 
     protected static String jwkSetUri() {
@@ -92,12 +105,31 @@ public abstract class AbstractKeycloakIntegrationTest extends AbstractIntegratio
         return RestClient.create();
     }
 
+    protected static String clientId() {
+        return requiredEnv("KEYCLOAK_CLIENT_ID");
+    }
+
+    protected static String clientSecret() {
+        return requiredEnv("KEYCLOAK_CLIENT_SECRET");
+    }
+
+    private static String requiredEnv(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(
+                    name + " is required for Keycloak IT. "
+                            + "Copy .env.example → .env (or export the var). "
+                            + "Gradle loads .env into the test JVM automatically.");
+        }
+        return value;
+    }
+
     @SuppressWarnings("unchecked")
     protected String getAccessToken(String username, String password) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "password");
-        form.add("client_id", "inventory-api");
-        form.add("client_secret", "inventory-api-secret");
+        form.add("client_id", clientId());
+        form.add("client_secret", clientSecret());
         form.add("username", username);
         form.add("password", password);
 

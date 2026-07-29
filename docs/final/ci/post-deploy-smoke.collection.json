@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "ProyectoQA post-deploy smoke (ENV-02)",
-    "description": "Colección Newman equivalente a scripts/post-deploy-smoke.sh. Variables: baseUrl, keycloakUrl, clientId, clientSecret.",
+    "description": "Colección Newman equivalente a scripts/post-deploy-smoke.sh. Definir en Environment: clientSecret, adminUser, adminPassword (ver .env.example). No commitear secretos reales.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -9,7 +9,9 @@
     { "key": "keycloakUrl", "value": "http://localhost:8181" },
     { "key": "realm", "value": "inventory" },
     { "key": "clientId", "value": "inventory-api" },
-    { "key": "clientSecret", "value": "inventory-api-secret" }
+    { "key": "clientSecret", "value": "" },
+    { "key": "adminUser", "value": "" },
+    { "key": "adminPassword", "value": "" }
   ],
   "item": [
     {
@@ -41,8 +43,8 @@
             { "key": "grant_type", "value": "password" },
             { "key": "client_id", "value": "{{clientId}}" },
             { "key": "client_secret", "value": "{{clientSecret}}" },
-            { "key": "username", "value": "admin" },
-            { "key": "password", "value": "admin" }
+            { "key": "username", "value": "{{adminUser}}" },
+            { "key": "password", "value": "{{adminPassword}}" }
           ]
         },
         "url": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token"
