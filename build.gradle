@@ -141,9 +141,12 @@ tasks.register('integrationTest', Test) {
     shouldRunAfter contractTest
 }
 
+// Agrega los .exec que existan: integrationTest solo corre si hay Docker, y el
+// fileTree lo omite sin fallar cuando falta.
 tasks.named('jacocoTestReport') {
     dependsOn test, apiTest
-    executionData.setFrom(fileTree(layout.buildDirectory.dir('jacoco')).include('test.exec', 'apiTest.exec'))
+    mustRunAfter tasks.named('integrationTest'), tasks.named('contractTest')
+    executionData.setFrom(fileTree(layout.buildDirectory.dir('jacoco')).include('*.exec'))
 }
 
 // SONAR-01 — SonarCloud (coverage via JaCoCo XML)
