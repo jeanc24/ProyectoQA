@@ -1,6 +1,7 @@
 package icc354.pucmm.proyectoqa.application.service;
 
 import icc354.pucmm.proyectoqa.domain.exception.KeycloakAdminException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -19,6 +20,9 @@ import java.util.Map;
 @Component
 public class KeycloakAdminClient {
 
+    private static final String AUTHORIZATION = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final RestClient restClient;
     private final String realm;
     private final String clientId;
@@ -26,6 +30,7 @@ public class KeycloakAdminClient {
     private final String adminUsername;
     private final String adminPassword;
 
+    @Autowired
     public KeycloakAdminClient(
             @Value("${app.keycloak.admin-server-url}") String adminServerUrl,
             @Value("${app.keycloak.realm:inventory}") String realm,
@@ -33,7 +38,19 @@ public class KeycloakAdminClient {
             @Value("${app.keycloak.admin-realm:master}") String adminRealm,
             @Value("${app.keycloak.admin-username}") String adminUsername,
             @Value("${app.keycloak.admin-password}") String adminPassword) {
-        this.restClient = RestClient.builder().baseUrl(trimTrailingSlash(adminServerUrl)).build();
+        this(RestClient.builder().baseUrl(trimTrailingSlash(adminServerUrl)).build(),
+                realm, clientId, adminRealm, adminUsername, adminPassword);
+    }
+
+    /** Visible for unit tests (MockRestServiceServer). */
+    KeycloakAdminClient(
+            RestClient restClient,
+            String realm,
+            String clientId,
+            String adminRealm,
+            String adminUsername,
+            String adminPassword) {
+        this.restClient = restClient;
         this.realm = realm;
         this.clientId = clientId;
         this.adminRealm = adminRealm;
@@ -46,7 +63,7 @@ public class KeycloakAdminClient {
         try {
             List<Map<String, Object>> users = restClient.get()
                     .uri("/admin/realms/{realm}/users?max={max}", realm, max)
-                    .header("Authorization", "Bearer " + token)
+                    .header(AUTHORIZATION, BEARER_PREFIX + token)
                     .retrieve()
                     .body(new ParameterizedTypeReference<>() {});
             return users != null ? users : List.of();
@@ -60,7 +77,7 @@ public class KeycloakAdminClient {
         try {
             List<Map<String, Object>> clients = restClient.get()
                     .uri("/admin/realms/{realm}/clients?clientId={clientId}", realm, clientId)
-                    .header("Authorization", "Bearer " + token)
+                    .header(AUTHORIZATION, BEARER_PREFIX + token)
                     .retrieve()
                     .body(new ParameterizedTypeReference<>() {});
             if (clients == null || clients.isEmpty()) {
@@ -84,7 +101,7 @@ public class KeycloakAdminClient {
             List<Map<String, Object>> roles = restClient.get()
                     .uri("/admin/realms/{realm}/users/{userId}/role-mappings/clients/{clientUuid}",
                             realm, userId, clientUuid)
-                    .header("Authorization", "Bearer " + token)
+                    .header(AUTHORIZATION, BEARER_PREFIX + token)
                     .retrieve()
                     .body(new ParameterizedTypeReference<>() {});
             if (roles == null || roles.isEmpty()) {
@@ -126,7 +143,7 @@ public class KeycloakAdminClient {
         }
     }
 
-    private static String trimTrailingSlash(String url) {
+    static String trimTrailingSlash(String url) {
         if (url == null || url.isBlank()) {
             throw new IllegalArgumentException("app.keycloak.admin-server-url must be set");
         }
