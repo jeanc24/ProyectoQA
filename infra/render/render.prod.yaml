@@ -1,0 +1,82 @@
+# Blueprint PRODUCTION — Render (API + Keycloak + Postgres)
+# Usar como Blueprint separado en Render (path: infra/render/render.prod.yaml)
+# Branch: main · Frontend: Vercel prod
+#
+# Plan free puede dormir servicios; para defensa usar starter si el free falla por RAM (Keycloak).
+# Grafana: no desplegar aquí — un solo Grafana en local (Compose).
+
+services:
+  - type: web
+    name: inventory-api-prod
+    runtime: docker
+    plan: free
+    branch: main
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventory-prod-db
+          property: connectionString
+      - key: KEYCLOAK_CLIENT_ID
+        value: inventory-api
+      - key: KEYCLOAK_REALM
+        value: inventory
+      - key: KEYCLOAK_ADMIN_REALM
+        value: master
+      - key: KEYCLOAK_ISSUER_URI
+        sync: false
+      - key: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+        sync: false
+      - key: KEYCLOAK_ADMIN_SERVER_URL
+        sync: false
+      - key: KEYCLOAK_ADMIN
+        sync: false
+      - key: KEYCLOAK_ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+        value: health,prometheus
+      - key: OTEL_TRACES_SAMPLING
+        value: "0.1"
+
+  - type: web
+    name: inventory-keycloak-prod
+    runtime: docker
+    plan: free
+    branch: main
+    region: oregon
+    dockerfilePath: ./infra/keycloak/Dockerfile
+    dockerContext: .
+    healthCheckPath: /realms/inventory
+    autoDeployTrigger: commit
+    envVars:
+      - key: KEYCLOAK_ADMIN
+        sync: false
+      - key: KEYCLOAK_ADMIN_PASSWORD
+        sync: false
+      - key: KC_HOSTNAME
+        sync: false
+      - key: KC_HOSTNAME_STRICT
+        value: "false"
+      - key: KC_HTTP_ENABLED
+        value: "true"
+      - key: KC_PROXY_HEADERS
+        value: xforwarded
+      # Prod: preferir start (no start-dev) cuando Keycloak tenga DB propia;
+      # start-dev basta para demo académica en free tier.
+      - key: KC_START_CMD
+        value: start-dev
+
+databases:
+  - name: inventory-prod-db
+    plan: free
+    postgresMajorVersion: "16"
+    databaseName: inventory
+    user: inventory

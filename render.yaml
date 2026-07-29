@@ -1,0 +1,83 @@
+# Blueprint STAGING — Render (API + Keycloak + Postgres)
+# Branch: develop · Frontend: Vercel (no está aquí)
+#
+# Setup: Dashboard Render → New → Blueprint → este repo → render.yaml
+# Tras el primer deploy: copiar URLs públicas a GitHub Secrets / Vercel env
+# y fijar KEYCLOAK_ISSUER_URI / KC_HOSTNAME / CORS / VITE_* (ver docs/final/ci/CLOUD.md).
+#
+# Observabilidad (Grafana/Loki/Tempo): NO se despliega en cloud.
+# Un solo Grafana en Compose local (decisión del curso).
+
+services:
+  - type: web
+    name: inventory-api-staging
+    runtime: docker
+    plan: free
+    branch: develop
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: staging
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventory-staging-db
+          property: connectionString
+      - key: KEYCLOAK_CLIENT_ID
+        value: inventory-api
+      - key: KEYCLOAK_REALM
+        value: inventory
+      - key: KEYCLOAK_ADMIN_REALM
+        value: master
+      # Rellenar sync:false en el dashboard con URLs reales tras el 1er deploy de Keycloak
+      - key: KEYCLOAK_ISSUER_URI
+        sync: false
+      - key: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+        sync: false
+      - key: KEYCLOAK_ADMIN_SERVER_URL
+        sync: false
+      - key: KEYCLOAK_ADMIN
+        sync: false
+      - key: KEYCLOAK_ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: OTEL_TRACES_SAMPLING
+        value: "0"
+
+  - type: web
+    name: inventory-keycloak-staging
+    runtime: docker
+    plan: free
+    branch: develop
+    region: oregon
+    dockerfilePath: ./infra/keycloak/Dockerfile
+    dockerContext: .
+    healthCheckPath: /realms/inventory
+    autoDeployTrigger: commit
+    envVars:
+      - key: KEYCLOAK_ADMIN
+        sync: false
+      - key: KEYCLOAK_ADMIN_PASSWORD
+        sync: false
+      # Debe coincidir con la URL pública https://inventory-keycloak-staging.onrender.com
+      - key: KC_HOSTNAME
+        sync: false
+      - key: KC_HOSTNAME_STRICT
+        value: "false"
+      - key: KC_HTTP_ENABLED
+        value: "true"
+      - key: KC_PROXY_HEADERS
+        value: xforwarded
+      - key: KC_START_CMD
+        value: start-dev
+
+databases:
+  - name: inventory-staging-db
+    plan: free
+    postgresMajorVersion: "16"
+    databaseName: inventory
+    user: inventory

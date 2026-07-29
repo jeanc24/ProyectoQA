@@ -25,6 +25,19 @@ docker compose --env-file .env up -d --build
 
 Postgres, Keycloak, Grafana, CORS, Vite y OTel se leen desde `.env` (mismo patrón que staging/prod). Valores demo en `.env.example`; tokens personales (`NVD_API_KEY`, `SONAR_TOKEN`) solo en tu `.env` local.
 
+## Cloud (Render + Vercel)
+
+Guía: [`CLOUD.md`](CLOUD.md).
+
+| Ambiente | Branch | Backend | Frontend |
+| -------- | ------ | ------- | -------- |
+| Staging | `develop` | Render (`render.yaml`) | Vercel |
+| Production | `main` | Render (`infra/render/render.prod.yaml`) | Vercel |
+
+**Grafana:** un solo tablero en Compose local. No se despliegan 3 Grafanas (dev/staging/prod).
+
+Workflows: `deploy-staging.yml` / `deploy-prod.yml` (hooks + smoke). El job `staging-deploy-e2e` de DevSecOps sigue siendo staging **efímero en CI**, no el cloud.
+
 ## Política de secretos
 
 | Capa | Qué hacer |

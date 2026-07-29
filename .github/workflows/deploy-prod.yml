@@ -1,0 +1,89 @@
+# Deploy PRODUCTION (cloud) — main → Render + Vercel
+# Blueprint Render: infra/render/render.prod.yaml · FE: proyecto Vercel prod
+name: Deploy production (cloud)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod-cloud
+  cancel-in-progress: false
+
+jobs:
+  trigger-render:
+    name: Trigger Render (prod)
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy hook API
+        env:
+          RENDER_DEPLOY_HOOK_API_PROD: ${{ secrets.RENDER_DEPLOY_HOOK_API_PROD }}
+          RENDER_DEPLOY_HOOK_KEYCLOAK_PROD: ${{ secrets.RENDER_DEPLOY_HOOK_KEYCLOAK_PROD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_DEPLOY_HOOK_API_PROD:-}" ]; then
+            echo "RENDER_DEPLOY_HOOK_API_PROD no configurado — confía en auto-deploy del Blueprint prod."
+            exit 0
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_API_PROD"
+          if [ -n "${RENDER_DEPLOY_HOOK_KEYCLOAK_PROD:-}" ]; then
+            curl -fsS -X POST "$RENDER_DEPLOY_HOOK_KEYCLOAK_PROD"
+          fi
+          echo "Render prod deploy hooks fired."
+
+  deploy-vercel:
+    name: Deploy Vercel (prod)
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@39
+
+      - name: Pull + build + deploy (production)
+        working-directory: frontend
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
+          VITE_API_URL: ${{ vars.PROD_API_URL }}
+          VITE_KEYCLOAK_URL: ${{ vars.PROD_KEYCLOAK_URL }}
+          VITE_KEYCLOAK_REALM: inventory
+          VITE_KEYCLOAK_CLIENT_ID: inventory-frontend
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ] || [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "::warning::Secrets Vercel prod incompletos — se omite deploy FE."
+            exit 0
+          fi
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed: $url"
+
+  smoke-cloud:
+    name: Post-deploy smoke (prod cloud)
+    needs: [trigger-render, deploy-vercel]
+    runs-on: ubuntu-latest
+    environment: production
+    if: ${{ vars.PROD_API_URL != '' && vars.PROD_KEYCLOAK_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait + smoke
+        env:
+          API_URL: ${{ vars.PROD_API_URL }}
+          KEYCLOAK_URL: ${{ vars.PROD_KEYCLOAK_URL }}
+          KEYCLOAK_CLIENT_ID: ${{ secrets.PROD_KEYCLOAK_CLIENT_ID }}
+          KEYCLOAK_CLIENT_SECRET: ${{ secrets.PROD_KEYCLOAK_CLIENT_SECRET }}
+          KEYCLOAK_ADMIN: ${{ secrets.PROD_KEYCLOAK_ADMIN }}
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.PROD_KEYCLOAK_ADMIN_PASSWORD }}
+          CORS_ORIGIN: ${{ vars.PROD_FRONTEND_URL }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/wait-for-stack.sh scripts/post-deploy-smoke.sh scripts/lib/load-env.sh
+          TIMEOUT_SEC=600 ./scripts/wait-for-stack.sh
+          ./scripts/post-deploy-smoke.sh
