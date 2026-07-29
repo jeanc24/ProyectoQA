@@ -35,13 +35,29 @@ export const DEMO_USERS: Record<DemoUser, { username: string; password: string }
 };
 
 /**
+ * Limpia cookies/storage para evitar que check-sso reautentique al cambiar de usuario.
+ */
+export async function clearAuthSession(page: Page) {
+  await page.context().clearCookies();
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+  // Segunda pasada: init de Keycloak sin cookies SSO ni tokens en storage.
+  await page.context().clearCookies();
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+}
+
+/**
  * Login por UI vía Keycloak (frontend en baseURL de Playwright).
  */
 export async function loginAs(page: Page, user: DemoUser) {
   const { username, password } = DEMO_USERS[user];
   const kcHost = new URL(KEYCLOAK_URL).host;
 
-  await page.goto("/login");
+  await clearAuthSession(page);
+  await expect(page.getByTestId("login-button")).toBeVisible({ timeout: 30_000 });
   await page.getByTestId("login-button").click();
   await page.waitForURL(new RegExp(kcHost.replace(/\./g, "\\.")));
 
