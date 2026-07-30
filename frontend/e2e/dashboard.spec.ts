@@ -10,6 +10,11 @@ const EVIDENCE_DIR = path.resolve(
 );
 
 test.describe("Dashboard (report:view)", () => {
+  /**
+   * Caso E2E #1: Dashboard con report:view
+   * Verifica que un admin ve KPIs (total, activos, stock bajo) y los paneles
+   * de stock bajo y movimientos recientes.
+   */
   test("admin with report:view sees dashboard KPIs", async ({ page }) => {
     await loginAs(page, "admin");
 
@@ -24,6 +29,11 @@ test.describe("Dashboard (report:view)", () => {
     await expect(page.getByTestId("panel-movements")).toBeVisible();
   });
 
+  /**
+   * Caso E2E #2: Evidencia responsive (móvil)
+   * Verifica la página de productos en viewport 375×812 y guarda screenshot
+   * en docs/final/testing/e2e/evidencias.
+   */
   test("mobile viewport — products page screenshot for evidence", async ({
     page,
   }) => {

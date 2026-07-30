@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
+/** Keycloak / API usados por los helpers E2E (override por env en CI). */
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL ?? "http://localhost:8081";
 const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM ?? "inventory";
 const KEYCLOAK_TOKEN_URL =
@@ -51,6 +52,7 @@ export async function clearAuthSession(page: Page) {
 
 /**
  * Login por UI vía Keycloak (frontend en baseURL de Playwright).
+ * Deja la sesión en /products tras el redirect de /management.
  */
 export async function loginAs(page: Page, user: DemoUser) {
   const { username, password } = DEMO_USERS[user];
@@ -65,11 +67,11 @@ export async function loginAs(page: Page, user: DemoUser) {
   await page.locator("#password").fill(password);
   await page.locator("#kc-login").click();
 
-  // Keycloak returns to /management, which redirects to /products
   await expect(page).toHaveURL(/\/products$/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Productos" })).toBeVisible();
 }
 
+/** Atajo: loginAs(page, "admin"). */
 export async function loginAsAdmin(page: Page) {
   await loginAs(page, "admin");
 }
@@ -100,7 +102,10 @@ export async function getAccessToken(
   return body.access_token;
 }
 
-/** Crea un producto vía API (requiere product:manage, p. ej. admin). */
+/**
+ * Crea un producto vía API (requiere product:manage, p. ej. admin).
+ * Usado para sembrar datos cuando el rol bajo prueba no puede crear productos.
+ */
 export async function createProductViaApi(
   request: APIRequestContext,
   token: string,

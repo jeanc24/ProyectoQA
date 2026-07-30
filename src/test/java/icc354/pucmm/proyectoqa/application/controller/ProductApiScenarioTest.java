@@ -30,6 +30,9 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
+ * Pruebas API de escenarios del controlador de productos (seguridad, validación y filtros).
+ */
 @Tag("api")
 @WebMvcTest(ProductController.class)
 @Import({GlobalExceptionHandler.class, ApiTestSecurityConfig.class})
@@ -72,12 +75,21 @@ class ProductApiScenarioTest {
     }
 
     // --- Seguridad ---
+
+    /**
+     * Caso API #1: Listar sin autenticación
+     * Verifica que GET /api/v1/products sin credenciales devuelve 401 Unauthorized.
+     */
     @Test
     void list_withoutAuth_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Caso API #2: Listar como viewer
+     * Verifica que un usuario con product:view obtiene 200 al listar productos.
+     */
     @Test
     void list_asViewer_returns200() throws Exception {
         when(productService.findAll(any(), any(), any(), any(), any()))
@@ -88,6 +100,10 @@ class ProductApiScenarioTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * Caso API #3: Crear sin autenticación
+     * Verifica que POST /api/v1/products sin credenciales devuelve 401 Unauthorized.
+     */
     @Test
     void create_withoutAuth_returns401() throws Exception {
         mockMvc.perform(post("/api/v1/products")
@@ -96,6 +112,10 @@ class ProductApiScenarioTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Caso API #4: Crear como viewer
+     * Verifica que un viewer sin product:manage recibe 403 al intentar crear un producto.
+     */
     @Test
     void create_asViewer_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/products")
@@ -105,6 +125,10 @@ class ProductApiScenarioTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Caso API #5: Crear como admin
+     * Verifica que un admin con product:manage obtiene 201 Created al crear un producto.
+     */
     @Test
     void create_asAdmin_returns201() throws Exception {
         when(productService.create(any(ProductRequest.class))).thenReturn(sampleResponse());
@@ -118,6 +142,10 @@ class ProductApiScenarioTest {
                 .andExpect(status().isCreated());
     }
 
+    /**
+     * Caso API #6: Actualizar como viewer
+     * Verifica que un viewer solo con product:view recibe 403 al actualizar un producto.
+     */
     @Test
     void update_asViewerOnly_returns403() throws Exception {
         mockMvc.perform(put("/api/v1/products/1")
@@ -127,6 +155,10 @@ class ProductApiScenarioTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Caso API #7: Eliminar como viewer
+     * Verifica que un viewer solo con product:view recibe 403 al eliminar un producto.
+     */
     @Test
     void delete_asViewerOnly_returns403() throws Exception {
         mockMvc.perform(delete("/api/v1/products/1")
@@ -135,6 +167,11 @@ class ProductApiScenarioTest {
     }
 
     // --- Validación / errores ---
+
+    /**
+     * Caso API #8: Body inválido al crear
+     * Verifica que un POST con campos inválidos devuelve 400 y mensaje de validación.
+     */
     @Test
     void create_invalidBody_returns400() throws Exception {
         mockMvc.perform(post("/api/v1/products")
@@ -156,6 +193,10 @@ class ProductApiScenarioTest {
                 .andExpect(jsonPath("$.message").value("Validation failed"));
     }
 
+    /**
+     * Caso API #9: Producto no encontrado
+     * Verifica que GET de un ID inexistente devuelve 404 con el mensaje de error.
+     */
     @Test
     void get_notFound_returns404() throws Exception {
         when(productService.findById(99L))
@@ -167,6 +208,10 @@ class ProductApiScenarioTest {
                 .andExpect(jsonPath("$.message").value("Product not found: 99"));
     }
 
+    /**
+     * Caso API #10: SKU duplicado
+     * Verifica que crear un producto con SKU existente devuelve 409 Conflict.
+     */
     @Test
     void create_duplicateSku_returns409() throws Exception {
         when(productService.create(any(ProductRequest.class)))
@@ -183,6 +228,11 @@ class ProductApiScenarioTest {
     }
 
     // --- Funcional ---
+
+    /**
+     * Caso API #11: Paginación en listado
+     * Verifica que los parámetros page y size se propagan al servicio al listar productos.
+     */
     @Test
     void list_withPagination_passesPageable() throws Exception {
         when(productService.findAll(any(), any(), any(), any(), any())).thenReturn(emptyPage());
@@ -193,6 +243,10 @@ class ProductApiScenarioTest {
         verify(productService).findAll(isNull(), isNull(), isNull(), isNull(), any());
     }
 
+    /**
+     * Caso API #12: Filtro por nombre
+     * Verifica que el parámetro name se pasa al servicio al filtrar el listado.
+     */
     @Test
     void list_withNameFilter_passesFilter() throws Exception {
         when(productService.findAll(any(), any(), any(), any(), any())).thenReturn(emptyPage());
@@ -203,6 +257,10 @@ class ProductApiScenarioTest {
         verify(productService).findAll(eq("Laptop"), isNull(), isNull(), isNull(), any());
     }
 
+    /**
+     * Caso API #13: Filtro por SKU
+     * Verifica que el parámetro sku se pasa al servicio al filtrar el listado.
+     */
     @Test
     void list_withSkuFilter_passesFilter() throws Exception {
         when(productService.findAll(any(), any(), any(), any(), any())).thenReturn(emptyPage());

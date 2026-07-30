@@ -36,6 +36,10 @@ class KeycloakAdminClientTest {
                 "admin");
     }
 
+    /**
+     * Caso #1: Cliente Keycloak Admin - Normalizar URL base
+     * Verifica que trimTrailingSlash elimina la barra final y rechaza valores en blanco o nulos.
+     */
     @Test
     void trimTrailingSlash_removesSlashAndRejectsBlank() {
         assertThat(KeycloakAdminClient.trimTrailingSlash("http://kc/")).isEqualTo("http://kc");
@@ -46,6 +50,10 @@ class KeycloakAdminClientTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    /**
+     * Caso #2: Cliente Keycloak Admin - Constructor público
+     * Verifica que el constructor público construye el cliente con la URL base recortada.
+     */
     @Test
     void publicConstructor_buildsClientWithTrimmedBaseUrl() {
         KeycloakAdminClient built = new KeycloakAdminClient(
@@ -58,6 +66,10 @@ class KeycloakAdminClientTest {
         assertThat(built).isNotNull();
     }
 
+    /**
+     * Caso #3: Cliente Keycloak Admin - Listar usuarios
+     * Verifica que obtiene el token admin y devuelve los usuarios desde la API de Keycloak.
+     */
     @Test
     void listUsers_returnsUsersFromAdminApi() {
         expectToken();
@@ -74,6 +86,10 @@ class KeycloakAdminClientTest {
         server.verify();
     }
 
+    /**
+     * Caso #4: Cliente Keycloak Admin - Listar usuarios (cuerpo vacío)
+     * Verifica que cuando la respuesta tiene cuerpo vacío o nulo, devuelve una lista vacía.
+     */
     @Test
     void listUsers_returnsEmptyWhenBodyNull() {
         expectToken();
@@ -85,6 +101,10 @@ class KeycloakAdminClientTest {
         assertThat(client.listUsers(5)).isEmpty();
     }
 
+    /**
+     * Caso #5: Cliente Keycloak Admin - Error al listar usuarios
+     * Verifica que los errores REST al listar usuarios se envuelven en KeycloakAdminException.
+     */
     @Test
     void listUsers_wrapsRestErrors() {
         expectToken();
@@ -97,6 +117,10 @@ class KeycloakAdminClientTest {
                 .hasMessageContaining("Failed to list users");
     }
 
+    /**
+     * Caso #6: Cliente Keycloak Admin - Resolver UUID del cliente
+     * Verifica que obtiene el token admin y devuelve el id del cliente por clientId.
+     */
     @Test
     void resolveClientUuid_returnsId() {
         expectToken();
@@ -111,6 +135,10 @@ class KeycloakAdminClientTest {
         server.verify();
     }
 
+    /**
+     * Caso #7: Cliente Keycloak Admin - Cliente no encontrado
+     * Verifica que si no existe el cliente en Keycloak, lanza KeycloakAdminException.
+     */
     @Test
     void resolveClientUuid_throwsWhenClientMissing() {
         expectToken();
@@ -123,6 +151,10 @@ class KeycloakAdminClientTest {
                 .hasMessageContaining("client not found");
     }
 
+    /**
+     * Caso #8: Cliente Keycloak Admin - Cliente sin id
+     * Verifica que si el cliente existe pero no tiene id, lanza KeycloakAdminException.
+     */
     @Test
     void resolveClientUuid_throwsWhenIdMissing() {
         expectToken();
@@ -137,6 +169,10 @@ class KeycloakAdminClientTest {
                 .hasMessageContaining("has no id");
     }
 
+    /**
+     * Caso #9: Cliente Keycloak Admin - Error al resolver UUID del cliente
+     * Verifica que los errores REST al resolver el client id se envuelven en KeycloakAdminException.
+     */
     @Test
     void resolveClientUuid_wrapsRestErrors() {
         expectToken();
@@ -149,6 +185,10 @@ class KeycloakAdminClientTest {
                 .hasMessageContaining("Failed to resolve Keycloak client id");
     }
 
+    /**
+     * Caso #10: Cliente Keycloak Admin - Listar roles del cliente
+     * Verifica que obtiene los roles asignados al usuario y los devuelve ordenados por nombre.
+     */
     @Test
     void listClientRoles_mapsAndSortsNames() {
         expectToken();
@@ -164,6 +204,10 @@ class KeycloakAdminClientTest {
         server.verify();
     }
 
+    /**
+     * Caso #11: Cliente Keycloak Admin - Sin roles asignados
+     * Verifica que cuando el usuario no tiene roles del cliente, devuelve una lista vacía.
+     */
     @Test
     void listClientRoles_returnsEmptyWhenNoRoles() {
         expectToken();
@@ -175,6 +219,10 @@ class KeycloakAdminClientTest {
         assertThat(client.listClientRoles("u1", "c1")).isEmpty();
     }
 
+    /**
+     * Caso #12: Cliente Keycloak Admin - Error al listar roles
+     * Verifica que los errores REST al listar roles se envuelven en KeycloakAdminException.
+     */
     @Test
     void listClientRoles_wrapsRestErrors() {
         expectToken();
@@ -188,6 +236,10 @@ class KeycloakAdminClientTest {
                 .hasMessageContaining("Failed to list roles");
     }
 
+    /**
+     * Caso #13: Cliente Keycloak Admin - Token sin access_token
+     * Verifica que si la respuesta del token no incluye access_token, lanza KeycloakAdminException.
+     */
     @Test
     void fetchAdminToken_throwsWhenAccessTokenMissing() {
         server.expect(requestTo(BASE + "/realms/master/protocol/openid-connect/token"))
@@ -199,6 +251,10 @@ class KeycloakAdminClientTest {
                 .hasMessageContaining("missing access_token");
     }
 
+    /**
+     * Caso #14: Cliente Keycloak Admin - Error al obtener token admin
+     * Verifica que los errores REST al solicitar el token se envuelven en KeycloakAdminException.
+     */
     @Test
     void fetchAdminToken_wrapsRestErrors() {
         server.expect(requestTo(BASE + "/realms/master/protocol/openid-connect/token"))
@@ -210,6 +266,10 @@ class KeycloakAdminClientTest {
                 .hasMessageContaining("Failed to obtain Keycloak admin token");
     }
 
+    /**
+     * Caso #15: Cliente Keycloak Admin - Constructores de KeycloakAdminException
+     * Verifica que los constructores con mensaje y con causa crean la excepción correctamente.
+     */
     @Test
     void keycloakAdminException_constructors() {
         KeycloakAdminException plain = new KeycloakAdminException("plain");

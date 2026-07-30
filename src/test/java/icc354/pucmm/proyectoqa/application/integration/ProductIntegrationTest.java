@@ -17,6 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+/**
+ * Pruebas de integración del ciclo de vida de productos contra Postgres real (Testcontainers).
+ */
 @Testcontainers
 class ProductIntegrationTest extends AbstractIntegrationTest {
 
@@ -45,6 +48,10 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
         );
     }
 
+    /**
+     * Caso de integración #1: Migraciones Flyway
+     * Verifica que Flyway aplicó al menos tres migraciones exitosas en la base de datos.
+     */
     @Test
     void flyway_appliesMigrations() {
         Integer count = jdbcTemplate.queryForObject(
@@ -55,6 +62,10 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
         assertThat(count).isGreaterThanOrEqualTo(3);
     }
 
+    /**
+     * Caso de integración #2: Crear y consultar producto
+     * Verifica que un producto creado se persiste y puede recuperarse por ID desde la BD.
+     */
     @Test
     void createAndFindProduct_persistsToDatabase() {
         ProductResponse created = productService.create(sampleRequest("INT-001"));
@@ -67,6 +78,10 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
         assertThat(productRepository.existsBySku("INT-001")).isTrue();
     }
 
+    /**
+     * Caso de integración #3: Actualizar producto
+     * Verifica que una actualización modifica nombre, precio y cantidad en la base de datos.
+     */
     @Test
     void updateProduct_changesFields() {
         ProductResponse created = productService.create(sampleRequest("INT-002"));
@@ -89,6 +104,10 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
         assertThat(updated.quantity()).isEqualTo(10);
     }
 
+    /**
+     * Caso de integración #4: Eliminar producto
+     * Verifica que al eliminar un producto ya no existe en el repositorio.
+     */
     @Test
     void deleteProduct_removesRow() {
         ProductResponse created = productService.create(sampleRequest("INT-003"));
@@ -98,6 +117,10 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
         assertThat(productRepository.existsById(created.id())).isFalse();
     }
 
+    /**
+     * Caso de integración #5: SKU duplicado
+     * Verifica que crear un producto con SKU ya existente lanza DuplicateSkuException.
+     */
     @Test
     void createProduct_duplicateSkuThrows() {
         productService.create(sampleRequest("INT-DUP"));
@@ -107,7 +130,11 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
                 .hasMessageContaining("INT-DUP");
     }
 
-   @Test
+    /**
+     * Caso de integración #6: Auditoría en actualización
+     * Verifica que al actualizar un producto se registra al menos una fila en products_audit.
+     */
+    @Test
     void updateProduct_writesAuditRow() {
         ProductResponse created = productService.create(sampleRequest("INT-AUDIT"));
 

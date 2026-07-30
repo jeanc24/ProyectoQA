@@ -20,20 +20,31 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Client del realm cuyas roles miramos (debe coincidir con inventory-realm.json). */
 const API_CLIENT_ID = "inventory-api";
 
+/**
+ * Estado de sesión Keycloak para toda la app.
+ *
+ * Bloques:
+ * 1. init (check-sso + PKCE) al montar
+ * 2. login / logout (redirect a Keycloak)
+ * 3. hasRole → resource roles de inventory-api (misma fuente que el JWT de la API)
+ * 4. refresh automático cuando el token expira
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    // Renovar token o cerrar sesión si falla el refresh
     keycloak.onTokenExpired = () => {
       keycloak.updateToken(30).catch(() => {
         keycloak.logout({ redirectUri: window.location.origin + "/" });
       });
     };
 
-    // Check if the user is already authenticated
+    // check-sso: no fuerza login; solo restaura sesión si ya hay SSO/cookies
     keycloak
       .init({
         onLoad: "check-sso",
@@ -46,29 +57,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => setReady(true));
   }, []);
 
-  // Redirects to Keycloak login; after success returns to /management
+  // Tras login, Keycloak vuelve a /management (App.tsx redirige a /products)
   const login = useCallback(() => {
     keycloak.login({
       redirectUri: window.location.origin + "/management",
     });
   }, []);
 
-  // Redirects to Keycloak logout; after success returns to the public landing
   const logout = useCallback(() => {
     keycloak.logout({
       redirectUri: window.location.origin + "/",
     });
   }, []);
 
-  // Checks if the user has the given role
+  // Roles del client inventory-api (product:view, stock:manage, …)
   const hasRole = useCallback((role: string) => {
     return keycloak.hasResourceRole(role, API_CLIENT_ID);
   }, []);
 
   const value = useMemo(
     () => ({
-      // The ready state is true if the keycloak instance is ready
-      // to prevent the user from accessing the application before it is ready
       ready,
       isAuthenticated,
       username: keycloak.tokenParsed?.preferred_username as string | undefined,
@@ -86,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+/** Hook: usar solo dentro de <AuthProvider>. */
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) {

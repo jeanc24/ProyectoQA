@@ -18,6 +18,9 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Pruebas de integración de reportes de inventario contra Postgres real (Testcontainers).
+ */
 @Testcontainers
 class ReportIntegrationTest extends AbstractIntegrationTest {
 
@@ -30,6 +33,10 @@ class ReportIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private ReportService reportService;
 
+    /**
+     * Caso de integración #1: Resumen de inventario
+     * Verifica que inventorySummary refleja productos creados con totales y valor positivo.
+     */
     @Test
     void inventorySummary_reflectsCreatedProducts() {
         productService.create(new ProductRequest(
@@ -44,6 +51,10 @@ class ReportIntegrationTest extends AbstractIntegrationTest {
         assertThat(summary.inventoryValue()).isGreaterThan(BigDecimal.ZERO);
     }
 
+    /**
+     * Caso de integración #2: Productos con stock bajo
+     * Verifica que lowStock incluye productos cuya cantidad está en o por debajo del mínimo.
+     */
     @Test
     void lowStock_includesProductAtOrBelowMin() {
         ProductResponse low = productService.create(new ProductRequest(
@@ -56,6 +67,10 @@ class ReportIntegrationTest extends AbstractIntegrationTest {
         assertThat(critical.stream().anyMatch(p -> p.id().equals(low.id()) && p.belowMinStock())).isTrue();
     }
 
+    /**
+     * Caso de integración #3: Top productos por salidas
+     * Verifica que topProducts ordena por volumen de movimientos OUT, con el más vendido primero.
+     */
     @Test
     void topProducts_ranksByOutVolume() {
         ProductResponse a = productService.create(new ProductRequest(

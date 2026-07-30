@@ -79,6 +79,11 @@ class ProductServiceTest {
         );
     }
 
+    /**
+     * Caso #1: Servicio de Producto - Crear Producto
+     * Verifica que el servicio limpia espacios del nombre/SKU, guarda y devuelve la respuesta
+     * con categoría. El SKU queda normalizado en mayúsculas (lap-001 → LAP-001).
+     */
     @Test
     void create_savesProductAndNormalizesSku() {
         when(productRepository.existsBySku("LAP-001")).thenReturn(false);
@@ -100,6 +105,10 @@ class ProductServiceTest {
         assertThat(response.categoryName()).isEqualTo("Electronics");
     }
 
+    /**
+     * Caso #2: Servicio de Producto - Crear Producto (SKU Duplicado)
+     * Verifica que si ya existe, lanza DuplicateSkuException y no llama a save.
+     */
     @Test
     void create_throwsWhenSkuExists() {
         when(productRepository.existsBySku("LAP-001")).thenReturn(true);
@@ -111,6 +120,10 @@ class ProductServiceTest {
         verify(productRepository, never()).save(any());
     }
 
+    /**
+     * Caso #3: Servicio de Producto - Crear Producto (Categoría no encontrada)
+     * Verifica que si la categoría no existe, lanza ResourceNotFoundException.
+     */
     @Test
     void create_throwsWhenCategoryNotFound() {
         when(productRepository.existsBySku("LAP-001")).thenReturn(false);
@@ -121,6 +134,10 @@ class ProductServiceTest {
                 .hasMessageContaining("Category not found: 1");
     }
 
+    /**
+     * Caso #4: Servicio de Producto - Crear Producto (Categoría nula)
+     * Verifica que si categoryId es nulo, se guarda sin categoría y no consulta el repo.
+     */
     @Test
     void create_withoutCategory_setsCategoryNull() {
         ProductRequest noCategory = new ProductRequest(
@@ -142,6 +159,10 @@ class ProductServiceTest {
         verify(categoryRepository, never()).findById(any());
     }
 
+    /**
+     * Caso #5: Servicio de Producto - Buscar Producto por ID
+     * Verifica que mapea el producto a ProductResponse e indica si está bajo stock mínimo.
+     */
     @Test
     void findById_returnsProduct() {
         when(productRepository.findById(10L)).thenReturn(Optional.of(product));
@@ -153,6 +174,10 @@ class ProductServiceTest {
         assertThat(response.belowMinStock()).isFalse();
     }
 
+    /**
+     * Caso #6: Servicio de Producto - Buscar Producto por ID (no encontrado)
+     * Verifica que si el producto no existe, lanza ResourceNotFoundException.
+     */
     @Test
     void findById_throwsWhenNotFound() {
         when(productRepository.findById(99L)).thenReturn(Optional.empty());
@@ -162,6 +187,10 @@ class ProductServiceTest {
                 .hasMessageContaining("Product not found: 99");
     }
 
+    /**
+     * Caso #7: Servicio de Producto - Actualizar Producto
+     * Verifica que aplica los cambios al producto existente y persiste.
+     */
     @Test
     void update_appliesChanges() {
         when(productRepository.findById(10L)).thenReturn(Optional.of(product));
@@ -175,6 +204,10 @@ class ProductServiceTest {
         verify(productRepository).save(product);
     }
 
+    /**
+     * Caso #8: Servicio de Producto - Actualizar Producto (no encontrado)
+     * Verifica que si el producto no existe, lanza ResourceNotFoundException.
+     */
     @Test
     void update_throwsWhenProductNotFound() {
         when(productRepository.findById(99L)).thenReturn(Optional.empty());
@@ -184,6 +217,10 @@ class ProductServiceTest {
                 .hasMessageContaining("Product not found: 99");
     }
 
+    /**
+     * Caso #9: Servicio de Producto - Actualizar Producto (SKU duplicado)
+     * Verifica que si el SKU pertenece a otro producto, lanza DuplicateSkuException.
+     */
     @Test
     void update_throwsWhenSkuTakenByOther() {
         when(productRepository.findById(10L)).thenReturn(Optional.of(product));
@@ -194,6 +231,10 @@ class ProductServiceTest {
                 .hasMessageContaining("LAP-001");
     }
 
+    /**
+     * Caso #10: Servicio de Producto - Eliminar Producto
+     * Verifica que elimina el producto cuando existe.
+     */
     @Test
     void delete_removesProduct() {
         when(productRepository.existsById(10L)).thenReturn(true);
@@ -203,6 +244,10 @@ class ProductServiceTest {
         verify(productRepository).deleteById(10L);
     }
 
+    /**
+     * Caso #11: Servicio de Producto - Eliminar Producto (no encontrado)
+     * Verifica que si no existe, lanza ResourceNotFoundException y no llama a deleteById.
+     */
     @Test
     void delete_throwsWhenNotFound() {
         when(productRepository.existsById(99L)).thenReturn(false);
@@ -214,6 +259,10 @@ class ProductServiceTest {
         verify(productRepository, never()).deleteById(any());
     }
 
+    /**
+     * Caso #12: Servicio de Producto - Listar con filtros y paginación
+     * Verifica que recorta filtros, arma patrones %texto% y pagina el resultado.
+     */
     @Test
     void findAll_appliesFiltersAndPagination() {
         Pageable pageable = PageRequest.of(0, 20);
@@ -232,6 +281,10 @@ class ProductServiceTest {
         assertThat(response.content().getFirst().name()).isEqualTo("Laptop Pro");
     }
 
+    /**
+     * Caso #13: Servicio de Producto - Listar sin filtros
+     * Verifica que filtros en blanco se envían como null al repositorio.
+     */
     @Test
     void findAll_blankFiltersPassNullPatterns() {
         Pageable pageable = PageRequest.of(0, 20);

@@ -1,7 +1,9 @@
 import { keycloak } from "../auth/keycloak";
 import type { ErrorResponse } from "../types/product";
 
-
+/**
+ * Error HTTP tipado (status + message + fieldErrors de la API).
+ */
 export class ApiError extends Error {
   status: number;
   fieldErrors?: { field: string; message: string }[];
@@ -17,44 +19,46 @@ export class ApiError extends Error {
   }
 }
 
-// Injects the jwt token into the all the api calls if the user is authenticated to avoid expired tokens
-// this is defined in the keycloak.ts file using the keycloak-js library
+/**
+ * fetch autenticado hacia la API.
+ *
+ * Bloques:
+ * 1. refresh del JWT si hace falta (updateToken)
+ * 2. header Authorization: Bearer …
+ * 3. llamada a VITE_API_URL + path
+ * 4. maneja 204 / errores → ApiError
+ *
+ * Todos los módulos frontend/src/api/*.ts pasan por aquí.
+ */
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-
-  // Update the token if the user is authenticated to avoid expired tokens
+  // Evita enviar un access token a punto de expirar
   if (keycloak.authenticated) {
     await keycloak.updateToken(30);
   }
 
-  // Set the headers for the api call
   const headers: Record<string, string> = {
     ...(options.body ? { "Content-Type": "application/json" } : {}),
     ...(options.headers as Record<string, string>),
   };
 
-  // Set the authorization header for the api call
   if (keycloak.token) {
     headers.Authorization = `Bearer ${keycloak.token}`;
   }
 
-  // Make the api call
   const response = await fetch(
     `${import.meta.env.VITE_API_URL}${path}`,
     { ...options, headers },
   );
 
-  // If the response is 204, return undefined
   if (response.status === 204) {
     return undefined as T;
   }
 
-  // If the response is not ok, throw an error
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as ErrorResponse | null;
-    // Create a new ApiError with the response status, message and field errors
     throw new ApiError(
       response.status,
       body?.message ?? response.statusText,
@@ -62,6 +66,5 @@ export async function apiFetch<T>(
     );
   }
 
-  // Return the response as a promise
   return response.json() as Promise<T>;
 }

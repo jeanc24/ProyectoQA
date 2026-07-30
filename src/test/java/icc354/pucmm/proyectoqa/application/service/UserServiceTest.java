@@ -23,6 +23,11 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
+    /**
+     * Caso #1: Servicio de Usuarios - Listar usuarios
+     * Verifica que obtiene usuarios de Keycloak, resuelve roles del cliente,
+     * mapea a UserResponse y ordena alfabéticamente por username.
+     */
     @Test
     void listUsers_mapsAndSortsByUsername() {
         when(keycloakAdminClient.resolveClientUuid()).thenReturn("client-uuid");
@@ -52,6 +57,11 @@ class UserServiceTest {
         assertThat(users.get(1).roles()).containsExactly("product:view", "stock:view");
     }
 
+    /**
+     * Caso #2: Servicio de Usuarios - Usuario sin ID
+     * Verifica que si el usuario no tiene id, omite la consulta de roles
+     * y devuelve roles vacíos con los demás campos mapeados.
+     */
     @Test
     void listUsers_skipsRolesWhenUserIdBlank() {
         when(keycloakAdminClient.resolveClientUuid()).thenReturn("client-uuid");

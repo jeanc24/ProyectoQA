@@ -22,6 +22,10 @@ class GlobalExceptionHandlerTest {
         handler = new GlobalExceptionHandler();
     }
 
+    /**
+     * Caso #1: GlobalExceptionHandler - Recurso no encontrado (404)
+     * Verifica que ResourceNotFoundException se mapea a ErrorResponse con status 404 y mensaje adecuado.
+     */
     @Test
     void handleNotFound_returns404() {
         ErrorResponse response = handler.handleNotFound(
@@ -32,6 +36,10 @@ class GlobalExceptionHandlerTest {
         assertThat(response.message()).contains("Product not found: 1");
     }
 
+    /**
+     * Caso #2: GlobalExceptionHandler - SKU duplicado (409)
+     * Verifica que DuplicateSkuException se mapea a ErrorResponse con status 409 Conflict.
+     */
     @Test
     void handleDuplicateSku_returns409() {
         ErrorResponse response = handler.handleDuplicateSku(
@@ -41,6 +49,11 @@ class GlobalExceptionHandlerTest {
         assertThat(response.error()).isEqualTo("Conflict");
     }
 
+    /**
+     * Caso #3: GlobalExceptionHandler - Validación fallida (400)
+     * Verifica que MethodArgumentNotValidException se mapea a ErrorResponse con status 400
+     * y lista de errores por campo.
+     */
     @Test
     void handleValidation_returns400WithFieldErrors() throws Exception {
         var target = new Object();
@@ -57,6 +70,10 @@ class GlobalExceptionHandlerTest {
         assertThat(response.fieldErrors().getFirst().field()).isEqualTo("name");
     }
 
+    /**
+     * Caso #4: GlobalExceptionHandler - Violación de integridad (409)
+     * Verifica que DataIntegrityViolationException se mapea a ErrorResponse con status 409.
+     */
     @Test
     void handleDataIntegrity_returns409() {
         ErrorResponse response = handler.handleDataIntegrity(

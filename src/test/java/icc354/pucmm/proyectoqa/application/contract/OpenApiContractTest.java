@@ -23,6 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Tag("contract")
 class OpenApiContractTest {
 
+    /**
+     * Caso de contrato #1: Rutas de controladores
+     * Verifica que los controladores principales exponen las rutas base esperadas de la API.
+     */
     @Test
     void controllersExposeCoreApiPaths() {
         assertPath(ProductController.class, "/api/v1/products");
@@ -32,6 +36,10 @@ class OpenApiContractTest {
         assertPath(AuditController.class, "/api/v1/audit/products");
     }
 
+    /**
+     * Caso de contrato #2: Colección Newman
+     * Verifica que la colección post-deploy incluye health y la ruta de productos.
+     */
     @Test
     void newmanCollectionCoversCoreApiPaths() throws Exception {
         Path collection = Path.of("docs/final/ci/post-deploy-smoke.collection.json");

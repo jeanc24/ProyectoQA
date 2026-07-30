@@ -1,9 +1,22 @@
-# Prometheus recording/alert rules — OBS-03
+#
+# Reglas de alerta Prometheus — OBS-03
+#
+# Cargado por prometheus.yml (rule_files).
+# Severidades: warning | critical
+# Receptor: Alertmanager (infra/prometheus/alertmanager.yml)
+#
+# Cómo probar (stack levantado):
+#   http://localhost:9090/alerts
+#   http://localhost:9093/#/alerts
+#
+
 groups:
   - name: inventory-operational
     interval: 15s
     rules:
       # --- Infra / JVM ---
+
+      # Caso alerta #1: CPU del proceso > 80% sostenida 2 min
       - alert: HighProcessCpu
         expr: process_cpu_usage{job="inventory-api"} > 0.80
         for: 2m
@@ -14,6 +27,7 @@ groups:
           summary: "CPU alta en inventory-api"
           description: "process_cpu_usage={{ $value | humanizePercentage }} > 80% durante 2m."
 
+      # Caso alerta #2: Heap JVM usado > 85% del máximo durante 2 min
       - alert: HighJvmHeapMemory
         expr: |
           (
@@ -30,6 +44,8 @@ groups:
           description: "Uso de heap={{ $value | humanizePercentage }} > 85% durante 2m."
 
       # --- Disponibilidad ---
+
+      # Caso alerta #3: scrape falló (API caída o /actuator/prometheus inaccesible)
       - alert: InventoryApiDown
         expr: up{job="inventory-api"} == 0
         for: 1m
@@ -41,6 +57,8 @@ groups:
           description: "Prometheus no puede scrapear api:8080/actuator/prometheus (up=0) por 1m."
 
       # --- Errores HTTP 5xx ---
+
+      # Caso alerta #4: proporción de 5xx > 5% en ventana de 5 min
       - alert: HighHttp5xxErrorRate
         expr: |
           (
@@ -57,6 +75,8 @@ groups:
           description: "Proporción de respuestas 5xx={{ $value | humanizePercentage }} > 5% (ventana 5m)."
 
       # --- Latencia p95 ---
+
+      # Caso alerta #5: p95 de latencia HTTP > 2s durante 3 min
       - alert: HighHttpLatencyP95
         expr: |
           histogram_quantile(
@@ -72,6 +92,8 @@ groups:
           description: "p95 de http_server_requests={{ $value | humanizeDuration }} > 2s durante 3m."
 
       # --- Auth / seguridad ---
+
+      # Caso alerta #6: spike de 401 (> 0.2 req/s) — token inválido o posible ataque
       - alert: AuthFailureSpike401
         expr: |
           sum(rate(http_server_requests_seconds_count{job="inventory-api", status="401"}[5m])) > 0.2

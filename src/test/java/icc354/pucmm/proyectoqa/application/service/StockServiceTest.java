@@ -49,6 +49,11 @@ class StockServiceTest {
         product.setMinStock(2);
     }
 
+    /**
+     * Caso #1: Servicio de Stock - Movimiento IN
+     * Verifica que un movimiento de entrada incrementa la cantidad del producto,
+     * persiste el cambio y devuelve la respuesta con cantidades antes/después y delta positivo.
+     */
     @Test
     void registerInMovement_increasesStock() {
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
@@ -74,6 +79,11 @@ class StockServiceTest {
         assertThat(productCaptor.getValue().getQuantity()).isEqualTo(15);
     }
 
+    /**
+     * Caso #2: Servicio de Stock - Movimiento OUT
+     * Verifica que un movimiento de salida decrementa la cantidad del producto
+     * y devuelve un delta negativo en la respuesta.
+     */
     @Test
     void registerOutMovement_decreasesStock() {
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
@@ -93,6 +103,11 @@ class StockServiceTest {
         assertThat(response.quantityDelta()).isEqualTo(-3);
     }
 
+    /**
+     * Caso #3: Servicio de Stock - Stock insuficiente en OUT
+     * Verifica que al intentar retirar más unidades de las disponibles,
+     * lanza InsufficientStockException y no persiste cambios.
+     */
     @Test
     void registerOutMovement_insufficientStockThrows() {
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
@@ -104,6 +119,11 @@ class StockServiceTest {
                 .hasMessageContaining("Insufficient stock");
     }
 
+    /**
+     * Caso #4: Servicio de Stock - Movimiento ADJUSTMENT
+     * Verifica que un ajuste establece la cantidad absoluta del producto
+     * y calcula correctamente el delta respecto al stock anterior.
+     */
     @Test
     void registerAdjustment_setsAbsoluteQuantity() {
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
@@ -123,6 +143,10 @@ class StockServiceTest {
         assertThat(response.quantityDelta()).isEqualTo(-6);
     }
 
+    /**
+     * Caso #5: Servicio de Stock - Producto desconocido al registrar movimiento
+     * Verifica que si el producto no existe, lanza ResourceNotFoundException.
+     */
     @Test
     void registerMovement_unknownProductThrows() {
         when(productRepository.findById(99L)).thenReturn(Optional.empty());
@@ -133,6 +157,11 @@ class StockServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
+    /**
+     * Caso #6: Servicio de Stock - Producto desconocido en findByProductId
+     * Verifica que al consultar movimientos de un producto inexistente,
+     * lanza ResourceNotFoundException.
+     */
     @Test
     void findByProductId_unknownProductThrows() {
         when(productRepository.existsById(99L)).thenReturn(false);

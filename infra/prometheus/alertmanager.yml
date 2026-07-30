@@ -1,20 +1,42 @@
+#
 # Alertmanager — OBS-03
+#
 # UI: http://localhost:9093
+#
+# Recibe alertas de Prometheus, las agrupa y las enruta a receivers.
+# En este proyecto no hay webhook externo (Slack/PagerDuty): las alertas
+# se consultan en la UI de Alertmanager y/o Grafana.
+#
+# Montado desde docker-compose.yml:
+#   ./infra/prometheus/alertmanager.yml → /etc/alertmanager/alertmanager.yml
+#
+
 global:
+  # Tras cuánto marcar una alerta como resuelta si deja de dispararse
   resolve_timeout: 5m
 
 route:
+  # Receptor por defecto (warning y resto)
   receiver: default-logger
+
+  # Agrupa notificaciones por nombre de alerta, servicio y severidad
   group_by: ["alertname", "service", "severity"]
+
+  # Espera antes de enviar el primer grupo (permite acumular)
   group_wait: 10s
+  # Espera entre actualizaciones del mismo grupo
   group_interval: 30s
+  # Reenvío periódico si sigue activa
   repeat_interval: 1h
+
   routes:
+    # Critical también va a critical-logger (además del default por continue)
     - matchers:
         - severity = "critical"
       receiver: critical-logger
       continue: true
 
+# Si hay critical de la misma alerta/servicio, silencia el warning gemelo
 inhibit_rules:
   - source_matchers:
       - severity = "critical"
@@ -23,6 +45,6 @@ inhibit_rules:
     equal: ["alertname", "service"]
 
 receivers:
-  # Sin webhook externo: las alertas se ven en la UI de Alertmanager / Grafana.
+  # Placeholders sin integración externa — suficientes para demo / defensa
   - name: default-logger
   - name: critical-logger

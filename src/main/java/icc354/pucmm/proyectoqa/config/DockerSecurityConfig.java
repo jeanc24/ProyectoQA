@@ -26,8 +26,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * JWT resource-server security for docker / staging / prod.
- * En {@code prod}, Swagger queda fuera de permitAll (springdoc deshabilitado).
+ * Seguridad JWT para perfiles {@code docker} / {@code staging} / {@code prod}.
+ *
+ * Bloques:
+ * 1. {@link #dockerSecurityFilterChain} — rutas públicas vs autenticadas + Resource Server
+ * 2. {@link #jwtAuthenticationConverter} — convierte claims del JWT en authorities
+ * 3. {@link #extractAuthorities} — lee roles de realm_access y resource_access[inventory-api]
+ *
+ * Esos authorities son los que usa {@code @PreAuthorize("hasAuthority('product:view')")}.
+ * En {@code prod}, Swagger queda fuera de permitAll si springdoc está deshabilitado.
  */
 @Configuration
 @EnableWebSecurity
@@ -35,12 +42,18 @@ import java.util.stream.Collectors;
 @Profile({"docker", "staging", "prod"})
 public class DockerSecurityConfig {
 
+    /**
+     * Cadena de filtros HTTP:
+     * - health / prometheus (y Swagger si está habilitado) → permitAll
+     * - resto → autenticado con JWT
+     */
     @Bean
     SecurityFilterChain dockerSecurityFilterChain(
             HttpSecurity http,
             Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter,
             @Value("${springdoc.swagger-ui.enabled:true}") boolean swaggerUiEnabled) throws Exception {
 
+        // --- Rutas públicas (sin Bearer) ---
         List<String> publicPaths = new ArrayList<>(List.of(
                 "/actuator/health",
                 "/actuator/health/**",
@@ -65,6 +78,8 @@ public class DockerSecurityConfig {
                         .requestMatchers(publicPaths.toArray(String[]::new)).permitAll()
                         .anyRequest().authenticated()
                 )
+                // Valida firma/issuer (issuer-uri / jwk-set-uri en application-*.yml)
+                // y aplica el converter de roles
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
                 );
@@ -72,6 +87,10 @@ public class DockerSecurityConfig {
         return http.build();
     }
 
+    /**
+     * Une el converter de authorities al flujo OAuth2 Resource Server.
+     * {@code app.keycloak.client-id} = client del realm cuyas roles importan (inventory-api).
+     */
     @Bean
     Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter(
             @Value("${app.keycloak.client-id}") String clientId) {
@@ -81,6 +100,13 @@ public class DockerSecurityConfig {
         return converter;
     }
 
+    /**
+     * Extrae roles del JWT:
+     * - realm_access.roles
+     * - resource_access.{clientId}.roles  ← aquí viven product:view, stock:manage, …
+     *
+     * Sin prefijo ROLE_: coinciden 1:1 con hasAuthority('product:view').
+     */
     private Collection<GrantedAuthority> extractAuthorities(Jwt jwt, String clientId) {
         Set<String> roles = new LinkedHashSet<>();
 

@@ -8,8 +8,11 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Perfil local: desarrollo sin Keycloak. Los endpoints quedan abiertos
- * hasta implementar OAuth2 en el issue de seguridad.
+ * Perfil {@code local}: desarrollo sin Keycloak.
+ *
+ * Todos los endpoints quedan abiertos (permitAll). No valida JWT.
+ * En Docker / staging / prod se usa {@link DockerSecurityConfig} en su lugar
+ * ({@code @Profile} mutuamente excluyente).
  */
 @Configuration
 @EnableWebSecurity

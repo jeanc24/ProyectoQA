@@ -51,6 +51,11 @@ class ReportServiceTest {
         lowStockProduct.setActive(true);
     }
 
+    /**
+     * Caso #1: Servicio de Reportes - Resumen de inventario
+     * Verifica que agrega los conteos del repositorio (totales, activos, inactivos,
+     * bajo stock, unidades y valor de inventario) en InventorySummaryResponse.
+     */
     @Test
     void inventorySummary_aggregatesRepositoryCounts() {
         when(productRepository.count()).thenReturn(10L);
@@ -70,6 +75,11 @@ class ReportServiceTest {
         assertThat(summary.inventoryValue()).isEqualByComparingTo("1500.00");
     }
 
+    /**
+     * Caso #2: Servicio de Reportes - Productos con bajo stock
+     * Verifica que mapea los productos con stock bajo a ProductResponse
+     * e indica correctamente belowMinStock.
+     */
     @Test
     void lowStock_mapsProducts() {
         when(productRepository.findLowStock(any(Pageable.class))).thenReturn(List.of(lowStockProduct));
@@ -81,6 +91,11 @@ class ReportServiceTest {
         assertThat(result.get(0).belowMinStock()).isTrue();
     }
 
+    /**
+     * Caso #3: Servicio de Reportes - Movimientos recientes
+     * Verifica que mapea el historial de movimientos de stock a StockMovementResponse
+     * con tipo, SKU del producto y datos del movimiento.
+     */
     @Test
     void recentMovements_mapsHistory() {
         StockMovement movement = new StockMovement();
@@ -103,6 +118,11 @@ class ReportServiceTest {
         assertThat(result.get(0).productSku()).isEqualTo("CAB-01");
     }
 
+    /**
+     * Caso #4: Servicio de Reportes - Top productos por salidas
+     * Verifica que mapea las filas de agregación del repositorio a TopProductResponse
+     * con nombre, SKU y unidades de salida.
+     */
     @Test
     void topProducts_mapsAggregationRows() {
         when(stockMovementRepository.findTopProductsByUnitsOut(any(Pageable.class)))
@@ -115,6 +135,11 @@ class ReportServiceTest {
         assertThat(result.get(0).productName()).isEqualTo("Cable");
     }
 
+    /**
+     * Caso #5: Servicio de Reportes - Valor nulo en resumen de inventario
+     * Verifica que cuando el valor total del inventario es nulo,
+     * se devuelve BigDecimal.ZERO en la respuesta.
+     */
     @Test
     void inventorySummary_nullValueBecomesZero() {
         when(productRepository.count()).thenReturn(0L);

@@ -32,6 +32,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Pruebas API de escenarios de stock: movimientos, permisos y historial por producto.
+ */
 @Tag("api")
 @WebMvcTest({StockController.class, ProductStockController.class})
 @Import({GlobalExceptionHandler.class, ApiTestSecurityConfig.class})
@@ -64,12 +67,20 @@ class StockApiScenarioTest {
                 """;
     }
 
+    /**
+     * Caso API #1: Listar movimientos sin autenticación
+     * Verifica que GET /api/v1/stock/movements sin credenciales devuelve 401 Unauthorized.
+     */
     @Test
     void list_withoutAuth_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/stock/movements"))
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Caso API #2: Listar sin permiso stock:view
+     * Verifica que un usuario sin stock:view recibe 403 al listar movimientos.
+     */
     @Test
     void list_withoutStockView_returns403() throws Exception {
         mockMvc.perform(get("/api/v1/stock/movements")
@@ -77,6 +88,10 @@ class StockApiScenarioTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Caso API #3: Listar con stock:view
+     * Verifica que un usuario con stock:view obtiene 200 y el tipo de movimiento en la respuesta.
+     */
     @Test
     void list_withStockView_returns200() throws Exception {
         when(stockService.findAll(any(), any(), any(), any(), any()))
@@ -88,6 +103,10 @@ class StockApiScenarioTest {
                 .andExpect(jsonPath("$.content[0].movementType").value("IN"));
     }
 
+    /**
+     * Caso API #4: Crear movimiento sin stock:manage
+     * Verifica que un usuario sin stock:manage recibe 403 al registrar un movimiento.
+     */
     @Test
     void create_withoutStockManage_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/stock/movements")
@@ -99,6 +118,10 @@ class StockApiScenarioTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Caso API #5: Crear movimiento con stock:manage
+     * Verifica que un usuario con stock:manage obtiene 201 y la cantidad resultante en la respuesta.
+     */
     @Test
     void create_withStockManage_returns201() throws Exception {
         when(stockService.registerMovement(any(), eq("admin")))
@@ -113,6 +136,10 @@ class StockApiScenarioTest {
                 .andExpect(jsonPath("$.quantityAfter").value(10));
     }
 
+    /**
+     * Caso API #6: Stock insuficiente
+     * Verifica que un movimiento OUT con cantidad excesiva devuelve 400 Bad Request.
+     */
     @Test
     void create_insufficientStock_returns400() throws Exception {
         when(stockService.registerMovement(any(), any()))
@@ -125,6 +152,10 @@ class StockApiScenarioTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Caso API #7: Historial de producto inexistente
+     * Verifica que el historial de un producto no encontrado devuelve 404 Not Found.
+     */
     @Test
     void productHistory_notFound_returns404() throws Exception {
         when(stockService.findByProductId(eq(99L), any()))
@@ -135,6 +166,10 @@ class StockApiScenarioTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Caso API #8: Historial de producto existente
+     * Verifica que el historial de stock de un producto devuelve 200 con el SKU en la respuesta.
+     */
     @Test
     void productHistory_withStockView_returns200() throws Exception {
         when(stockService.findByProductId(eq(10L), any()))

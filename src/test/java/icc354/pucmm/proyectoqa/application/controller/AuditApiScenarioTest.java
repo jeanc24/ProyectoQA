@@ -25,6 +25,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Pruebas API de escenarios del controlador de auditoría de productos.
+ */
 @Tag("api")
 @WebMvcTest(AuditController.class)
 @Import({GlobalExceptionHandler.class, ApiTestSecurityConfig.class})
@@ -55,12 +58,20 @@ class AuditApiScenarioTest {
         );
     }
 
+    /**
+     * Caso API #1: Historial sin autenticación
+     * Verifica que GET /api/v1/audit/products/{id} sin credenciales devuelve 401 Unauthorized.
+     */
     @Test
     void history_withoutAuth_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/audit/products/1"))
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Caso API #2: Historial solo con product:view
+     * Verifica que un usuario sin audit:view recibe 403 al consultar el historial.
+     */
     @Test
     void history_withProductViewOnly_returns403() throws Exception {
         mockMvc.perform(get("/api/v1/audit/products/1")
@@ -68,6 +79,10 @@ class AuditApiScenarioTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Caso API #3: Historial con audit:view
+     * Verifica que un usuario con audit:view obtiene 200 y los datos de la revisión.
+     */
     @Test
     void history_withAuditView_returns200() throws Exception {
         when(auditService.getProductHistory(1L)).thenReturn(List.of(sampleRevision()));
@@ -79,6 +94,10 @@ class AuditApiScenarioTest {
                 .andExpect(jsonPath("$[0].sku").value("LAP-001"));
     }
 
+    /**
+     * Caso API #4: Producto no encontrado en auditoría
+     * Verifica que el historial de un producto inexistente devuelve 404 con mensaje de error.
+     */
     @Test
     void history_notFound_returns404() throws Exception {
         when(auditService.getProductHistory(99L))

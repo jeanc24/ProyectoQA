@@ -11,6 +11,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
+ * Pruebas de integración de integridad de datos: migraciones Flyway y restricciones de Postgres.
+ *
  * Correr Test: .\gradlew.bat integrationTest --tests "*DataIntegrityIntegrationTest"
  */
 @Testcontainers
@@ -27,6 +29,10 @@ class DataIntegrityIntegrationTest extends AbstractIntegrationTest {
     // BLOQUE 1 — Flyway: ¿las migraciones corrieron bien en una BD vacía?
     // =========================================================================
 
+    /**
+     * Caso de integración #1: Migraciones Flyway completas
+     * Verifica que Flyway aplicó migraciones exitosas y creó las tablas principales del esquema.
+     */
     @Test
     @DisplayName("Flyway applied all migrations successfully on empty database")
     void flyway_appliesAllMigrationsOnEmptyDatabase() {
@@ -46,6 +52,10 @@ class DataIntegrityIntegrationTest extends AbstractIntegrationTest {
         assertThat(tableExists("revinfo")).isTrue(); 
     }
 
+    /**
+     * Caso de integración #2: Sin migración seed
+     * Verifica que no existe ninguna migración seed que inserte datos de demostración.
+     */
     @Test
     @DisplayName("No seed migration present — skip seed assertions")
     void seedData_noSeedMigrationPresent() {
@@ -68,7 +78,10 @@ class DataIntegrityIntegrationTest extends AbstractIntegrationTest {
     // Patrón: intentar algo ilegal → esperamos DataAccessException (error SQL).
     // =========================================================================
 
-    //Bloque 2 test 1: SKU unique constraint rejects duplicate SKU
+    /**
+     * Caso de integración #3: Restricción UNIQUE en SKU
+     * Verifica que Postgres rechaza un segundo producto con el mismo SKU.
+     */
     @Test
     @DisplayName("SKU unique constraint rejects duplicate SKU")
     void constraint_duplicateSku_isRejected() {
@@ -91,7 +104,11 @@ class DataIntegrityIntegrationTest extends AbstractIntegrationTest {
 
         // Se espera que se lance una DataAccessException de postgress para que el test falle
     }
-    //Bloque 2 test 2: CHECK (price >= 0) rejects negative price
+
+    /**
+     * Caso de integración #4: CHECK precio no negativo
+     * Verifica que Postgres rechaza un producto con precio negativo.
+     */
     @Test
     @DisplayName("CHECK (price >= 0) rejects negative price")
     void constraint_negativePrice_isRejected() {
@@ -105,7 +122,11 @@ class DataIntegrityIntegrationTest extends AbstractIntegrationTest {
         )).isInstanceOf(DataAccessException.class);
         // Se espera que se lance una DataAccessException de postgress para que el test falle
     }
-    //Bloque 2 test 3: FK category_id rejects unknown category
+
+    /**
+     * Caso de integración #5: FK categoría inválida
+     * Verifica que Postgres rechaza un producto con category_id que no existe.
+     */
     @Test
     @DisplayName("FK category_id rejects unknown category")
     void constraint_invalidCategoryFk_isRejected() {
@@ -120,7 +141,10 @@ class DataIntegrityIntegrationTest extends AbstractIntegrationTest {
         // Se espera que se lance una DataAccessException de postgress para que el test falle
     }
 
-    //Bloque 2 test 4: Valid category FK allows product insert
+    /**
+     * Caso de integración #6: FK categoría válida
+     * Verifica que un producto con category_id existente se inserta correctamente.
+     */
     @Test
     @DisplayName("Valid category FK allows product insert")
     void constraint_validCategoryFk_isAccepted() {

@@ -23,6 +23,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Pruebas API de escenarios del controlador de usuarios (Keycloak y permisos).
+ */
 @Tag("api")
 @WebMvcTest(UserController.class)
 @Import({GlobalExceptionHandler.class, ApiTestSecurityConfig.class})
@@ -35,12 +38,20 @@ class UserApiScenarioTest {
     @MockitoBean
     private UserService userService;
 
+    /**
+     * Caso API #1: Listar usuarios sin autenticación
+     * Verifica que GET /api/v1/users sin credenciales devuelve 401 Unauthorized.
+     */
     @Test
     void list_withoutAuth_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/users"))
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Caso API #2: Listar sin user:manage
+     * Verifica que un usuario sin user:manage recibe 403 al listar usuarios.
+     */
     @Test
     void list_withoutUserManage_returns403() throws Exception {
         mockMvc.perform(get("/api/v1/users")
@@ -48,6 +59,10 @@ class UserApiScenarioTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Caso API #3: Listar con user:manage
+     * Verifica que un admin con user:manage obtiene 200 y los datos del usuario en la respuesta.
+     */
     @Test
     void list_withUserManage_returns200() throws Exception {
         when(userService.listUsers()).thenReturn(List.of(
@@ -69,6 +84,10 @@ class UserApiScenarioTest {
                 .andExpect(jsonPath("$[0].roles[0]").value("product:view"));
     }
 
+    /**
+     * Caso API #4: Keycloak no disponible
+     * Verifica que un fallo al contactar Keycloak devuelve 503 Service Unavailable.
+     */
     @Test
     void list_whenKeycloakDown_returns503() throws Exception {
         when(userService.listUsers())

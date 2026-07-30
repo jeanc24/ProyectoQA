@@ -21,6 +21,9 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Pruebas de integración de movimientos de stock y su persistencia en Postgres (Testcontainers).
+ */
 @Testcontainers
 class StockIntegrationTest extends AbstractIntegrationTest {
 
@@ -49,6 +52,10 @@ class StockIntegrationTest extends AbstractIntegrationTest {
         ));
     }
 
+    /**
+     * Caso de integración #1: Entrada de stock
+     * Verifica que un movimiento IN persiste el registro y actualiza la cantidad del producto.
+     */
     @Test
     void registerInMovement_persistsMovementAndUpdatesProduct() {
         ProductResponse product = createProduct("STK-IN-01", 5);
@@ -68,6 +75,10 @@ class StockIntegrationTest extends AbstractIntegrationTest {
         assertThat(rowCount).isEqualTo(1);
     }
 
+    /**
+     * Caso de integración #2: Salida con stock insuficiente
+     * Verifica que un movimiento OUT mayor al stock disponible lanza InsufficientStockException.
+     */
     @Test
     void registerOutMovement_insufficientStockThrows() {
         ProductResponse product = createProduct("STK-OUT-01", 2);
@@ -80,6 +91,10 @@ class StockIntegrationTest extends AbstractIntegrationTest {
         assertThat(productRepository.findById(product.id()).orElseThrow().getQuantity()).isEqualTo(2);
     }
 
+    /**
+     * Caso de integración #3: Historial por producto
+     * Verifica que findByProductId devuelve los movimientos ordenados por fecha descendente.
+     */
     @Test
     void findByProductId_returnsMovementHistory() {
         ProductResponse product = createProduct("STK-HIST-01", 10);

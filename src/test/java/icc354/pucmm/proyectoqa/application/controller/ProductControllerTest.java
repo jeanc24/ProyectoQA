@@ -68,6 +68,10 @@ class ProductControllerTest {
                 """;
     }
 
+    /**
+     * Caso #1: Controller de Producto - Listar productos (200)
+     * Verifica que GET /api/v1/products devuelve HTTP 200 con la página de productos.
+     */
     @Test
     void list_returns200() throws Exception {
         when(productService.findAll(any(), any(), any(), any(), any()))
@@ -78,6 +82,10 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.content[0].sku").value("LAP-001"));
     }
 
+    /**
+     * Caso #2: Controller de Producto - Obtener producto por ID (200)
+     * Verifica que GET /api/v1/products/{id} devuelve HTTP 200 con el producto solicitado.
+     */
     @Test
     void get_returns200() throws Exception {
         when(productService.findById(1L)).thenReturn(sampleResponse());
@@ -87,6 +95,10 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.name").value("Laptop"));
     }
 
+    /**
+     * Caso #3: Controller de Producto - Crear producto (201)
+     * Verifica que POST /api/v1/products con datos válidos devuelve HTTP 201 Created.
+     */
     @Test
     void create_returns201() throws Exception {
         when(productService.create(any(ProductRequest.class))).thenReturn(sampleResponse());
@@ -98,6 +110,10 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.id").value(1));
     }
 
+    /**
+     * Caso #4: Controller de Producto - Crear producto inválido (400)
+     * Verifica que POST con datos inválidos devuelve HTTP 400 Bad Request con errores de validación.
+     */
     @Test
     void create_returns400_whenInvalid() throws Exception {
         mockMvc.perform(post("/api/v1/products")
@@ -116,6 +132,10 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.message").value("Validation failed"));
     }
 
+    /**
+     * Caso #5: Controller de Producto - Crear producto con SKU duplicado (409)
+     * Verifica que POST con SKU duplicado devuelve HTTP 409 Conflict.
+     */
     @Test
     void create_returns409_whenDuplicateSku() throws Exception {
         when(productService.create(any(ProductRequest.class)))
@@ -128,6 +148,10 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.status").value(409));
     }
 
+    /**
+     * Caso #6: Controller de Producto - Actualizar producto (200)
+     * Verifica que PUT /api/v1/products/{id} devuelve HTTP 200 con el producto actualizado.
+     */
     @Test
     void update_returns200() throws Exception {
         when(productService.update(eq(1L), any(ProductRequest.class))).thenReturn(sampleResponse());
@@ -139,6 +163,10 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.sku").value("LAP-001"));
     }
 
+    /**
+     * Caso #7: Controller de Producto - Eliminar producto (204)
+     * Verifica que DELETE /api/v1/products/{id} devuelve HTTP 204 No Content e invoca al servicio.
+     */
     @Test
     void delete_returns204() throws Exception {
         mockMvc.perform(delete("/api/v1/products/1"))
@@ -147,6 +175,10 @@ class ProductControllerTest {
         verify(productService).delete(1L);
     }
 
+    /**
+     * Caso #8: Controller de Producto - Producto no encontrado (404)
+     * Verifica que GET /api/v1/products/{id} inexistente devuelve HTTP 404 Not Found.
+     */
     @Test
     void get_returns404_whenNotFound() throws Exception {
         when(productService.findById(99L))

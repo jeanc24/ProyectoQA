@@ -1,5 +1,14 @@
 #!/bin/sh
-# Render free (512MB): heap vía JAVA_OPTS_APPEND (sin UseSerialGC, sin JAVA_OPTS_KC_HEAP).
+#
+# Entrypoint Keycloak (Compose / Render).
+#
+# Bloques:
+# 1. Puerto HTTP (Render inyecta PORT)
+# 2. Heap acotado para free tier (JAVA_OPTS_APPEND)
+# 3. DATABASE_URL → KC_DB_* (Postgres)
+# 4. KEYCLOAK_ADMIN* → bootstrap admin
+# 5. start | start-dev con --import-realm (carga inventory-realm.json)
+#
 set -eu
 
 PORT="${PORT:-8080}"

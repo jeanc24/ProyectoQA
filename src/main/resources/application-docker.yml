@@ -1,23 +1,36 @@
-# Perfil `docker` — valores por env (compose / .env). Defaults = demo local.
+# =============================================================================
+# Perfil Spring `docker` — API detrás de Keycloak (también base de staging/prod).
+#
+# La API es OAuth2 Resource Server: valida JWT con issuer + JWKS de Keycloak.
+# Los permisos del token (roles del client inventory-api) los mapea
+# DockerSecurityConfig → @PreAuthorize("hasAuthority('…')").
+# =============================================================================
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5433/inventory}
     username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER:inventory}}
     password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD:inventory}}
+
   security:
     oauth2:
       resourceserver:
         jwt:
+          # Quién emite el token (debe coincidir con el claim `iss` del JWT)
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/inventory}
+          # Claves públicas para verificar la firma del JWT
           jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:http://localhost:8081/realms/inventory/protocol/openid-connect/certs}
 
 app:
   keycloak:
+    # Client cuyas roles van en resource_access (mismo id que en inventory-realm.json)
     client-id: ${KEYCLOAK_CLIENT_ID:inventory-api}
     realm: ${KEYCLOAK_REALM:inventory}
+    # Admin API (listado de usuarios, etc.) — hostname interno de Compose
     admin-server-url: ${KEYCLOAK_ADMIN_SERVER_URL:http://keycloak:8080}
     admin-realm: ${KEYCLOAK_ADMIN_REALM:master}
     admin-username: ${KEYCLOAK_ADMIN:admin}
     admin-password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
   cors:
+    # Orígenes del frontend (Vite / nginx)
     allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
