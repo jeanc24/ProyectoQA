@@ -46,10 +46,15 @@ KEYCLOAK_TOKEN_URL=http://localhost:8181/realms/inventory/protocol/openid-connec
 
 ## CI
 
-Workflow [`.github/workflows/post-deploy-staging.yml`](../../.github/workflows/post-deploy-staging.yml):
+La ejecución automática vive en el job `staging-deploy-e2e` del
+[pipeline principal](../../../.github/workflows/devsecops.yml):
 
-- Trigger: `push` / `pull_request` a `develop` + `workflow_dispatch`
+- Trigger: `push` / `pull_request` a `develop` + `workflow_dispatch`.
 - Artefacto: `post-deploy-evidence` (markdown smoke + resultados Playwright si fallan)
+
+El workflow [`post-deploy-staging.yml`](../../../.github/workflows/post-deploy-staging.yml)
+contiene el mismo flujo como respaldo aislado, pero se ejecuta **solo manualmente**
+con `workflow_dispatch`.
 
 ## Nota Postgres
 
