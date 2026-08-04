@@ -17,7 +17,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "401 Unauthorized: sin autenticación o token inválido.",
       "fieldConfig": {
         "defaults": {
@@ -55,7 +55,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "403 Forbidden: autenticado pero sin el permiso (scope) requerido.",
       "fieldConfig": {
         "defaults": {
@@ -93,7 +93,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Suma de fallos de auth (401 + 403).",
       "fieldConfig": {
         "defaults": {
@@ -130,7 +130,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Requests 2xx de la API (contexto: tráfico OK vs fallos).",
       "fieldConfig": {
         "defaults": {
@@ -172,7 +172,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Serie de 401. Prueba: curl sin Authorization a /api/v1/products.",
       "fieldConfig": {
         "defaults": {
@@ -216,7 +216,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Serie de 403. Prueba: token de un rol sin el permiso del endpoint.",
       "fieldConfig": {
         "defaults": {
@@ -260,7 +260,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "401 + 403 combinados (auth failures).",
       "fieldConfig": {
         "defaults": {
@@ -304,7 +304,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Dónde fallan: desglose por status + uri.",
       "fieldConfig": {
         "defaults": {
