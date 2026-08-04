@@ -134,7 +134,7 @@
     },
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "description": "Logs del contenedor inventory-api (Alloy → Loki). Las líneas llevan [traceId,spanId]; el datasource Loki tiene derivedFields hacia Tempo.",
+      "description": "Request logs de inventory-api (con [traceId,spanId]). Clic en View Trace → Tempo.",
       "gridPos": { "h": 12, "w": 12, "x": 0, "y": 9 },
       "id": 10,
       "options": {
@@ -151,17 +151,19 @@
         {
           "datasource": { "type": "loki", "uid": "loki" },
           "editorMode": "code",
-          "expr": "{job=\"inventory-api\"}",
+          "expr": "{job=\"inventory-api\"} |= \"HTTP \"",
           "queryType": "range",
-          "refId": "A"
+          "refId": "A",
+          "maxLines": 200,
+          "direction": "backward"
         }
       ],
-      "title": "Logs inventory-api",
+      "title": "Logs inventory-api (requests)",
       "type": "logs"
     },
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "description": "Solo líneas con ERROR / level=ERROR (etiqueta de Alloy).",
+      "description": "Requests con status 4xx/5xx o líneas ERROR.",
       "gridPos": { "h": 12, "w": 12, "x": 12, "y": 9 },
       "id": 11,
       "options": {
@@ -178,58 +180,66 @@
         {
           "datasource": { "type": "loki", "uid": "loki" },
           "editorMode": "code",
-          "expr": "{job=\"inventory-api\"} |~ \"(?i)ERROR\"",
+          "expr": "{job=\"inventory-api\"} |~ \"(?i)ERROR|HTTP [A-Z]+ .+ -> [45][0-9]{2}\"",
           "queryType": "range",
-          "refId": "A"
+          "refId": "A",
+          "maxLines": 100,
+          "direction": "backward"
         }
       ],
-      "title": "Logs ERROR",
+      "title": "Logs ERROR / 4xx / 5xx",
       "type": "logs"
     },
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
       "id": 102,
-      "title": "Trazas (Tempo) — clic en un TraceID para el waterfall",
+      "title": "Trazas (Tempo) — clic en TraceID para el waterfall",
       "type": "row"
     },
     {
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "description": "Últimas trazas de inventory-api (OpenTelemetry → Alloy → Tempo). Clic en una fila para ver spans HTTP + JDBC.",
+      "description": "Últimas trazas de inventory-api (OpenTelemetry → Alloy → Tempo). Clic en Trace ID para el waterfall.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 22 },
       "id": 20,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": ["sum"],
+          "countRows": false,
+          "fields": ""
+        }
+      },
       "targets": [
         {
           "datasource": { "type": "tempo", "uid": "tempo" },
-          "filters": [
-            {
-              "id": "service-name",
-              "operator": "=",
-              "scope": "resource",
-              "tag": "service.name",
-              "value": ["inventory-api"],
-              "valueType": "string"
-            }
-          ],
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"inventory-api\"}",
           "limit": 20,
-          "queryType": "traceqlSearch",
-          "refId": "A",
-          "tableType": "traces"
+          "tableType": "traces",
+          "refId": "A"
         }
       ],
       "title": "Trazas recientes — service.name = inventory-api",
-      "type": "traces"
+      "transformations": [],
+      "type": "table"
     }
   ],
   "refresh": "10s",
   "schemaVersion": 39,
   "tags": ["inventory", "observabilidad", "loki", "tempo", "prometheus"],
   "templating": { "list": [] },
-  "time": { "from": "now-15m", "to": "now" },
+  "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
   "title": "Observabilidad — Métricas, Logs y Trazas",
   "uid": "inventory-observability",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

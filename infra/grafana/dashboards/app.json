@@ -17,7 +17,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Requests por segundo en el último minuto (todas las rutas).",
       "fieldConfig": {
         "defaults": {
@@ -51,7 +51,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Latencia media = sum(rate(sum)) / sum(rate(count)).",
       "fieldConfig": {
         "defaults": {
@@ -89,7 +89,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Errores de servidor (5xx) por segundo.",
       "fieldConfig": {
         "defaults": {
@@ -126,7 +126,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Errores de cliente (4xx) por segundo.",
       "fieldConfig": {
         "defaults": {
@@ -171,7 +171,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Throughput global: sum(rate(http_server_requests_seconds_count[1m])).",
       "fieldConfig": {
         "defaults": {
@@ -210,7 +210,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Latencia media en segundos. No usa histogram_quantile porque faltan series _bucket.",
       "fieldConfig": {
         "defaults": {
@@ -249,7 +249,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "4xx = errores de cliente (auth, validación). 5xx = fallos del servidor.",
       "fieldConfig": {
         "defaults": {
@@ -302,7 +302,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Tráfico por URI. Excluye UNKNOWN. Incluye actuator (health/prometheus) del scrape.",
       "fieldConfig": {
         "defaults": {
