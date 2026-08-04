@@ -26,7 +26,8 @@ Monorepo con API REST (Spring Boot), interfaz web (React), base de datos Postgre
 | Observabilidad | Spring Actuator, Micrometer, OpenTelemetry, Prometheus, Tempo, Loki, Alloy, Alertmanager, Grafana |
 
 
-> **Guía de defensa del proyecto:** [`docs/final/defensa/`](docs/final/defensa/) — arquitectura, flujos, seguridad, datos, testing, CI/CD y observabilidad explicados con el código, más un banco de 120 preguntas con respuesta.
+> **Documentación del entregable:** [`docs/final/`](docs/final/) — [requisitos](docs/final/REQUISITOS.md), [técnica](docs/final/TECNICA.md), [guía de pruebas](docs/final/GUIA-PRUEBAS.md).  
+> **Guía de defensa:** [`docs/final/defensa/`](docs/final/defensa/) — arquitectura, flujos, testing, CI/CD y banco de preguntas.
 
 ## Índice
 
