@@ -1,7 +1,7 @@
 # OWASP ZAP — evidencias (TEST-03)
 
 - **Target:** `http://host.docker.internal:8080/swagger-ui.html`
-- **Fecha:** 2026-07-23T17:32:26Z
+- **Fecha:** 2026-08-04T14:43:23Z
 - **Exit code ZAP:** `0` (0=OK, 1=warnings, 2+=fail; se usa `-I` para no bloquear por WARN)
 - **Reportes:** `zap-report.html`, `zap-report.json`, `zap-warnings.md`
 

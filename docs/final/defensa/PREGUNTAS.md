@@ -1,8 +1,8 @@
 # Banco de preguntas y respuestas
 
-Las 58 preguntas del avance (P1–P58) + 62 adicionales (P59–P120) + **bloque del profesor (P121–P143)** sobre pipeline, despliegue, paginación, tokens, roles, k6, cobertura y observabilidad. Cada respuesta trae **el archivo donde demostrarla**.
+Las 58 preguntas del avance (P1–P58) + 62 adicionales (P59–P120) + **bloque del profesor (P121–P144)** sobre pipeline, ambientes (local vs cloud), despliegue Vercel/Render, paginación, tokens, roles, k6, cobertura y observabilidad. Cada respuesta trae **el archivo donde demostrarla**.
 
-> Guía completa: [`README.md`](README.md) · Árbol comentado: [`ARBOL.md`](ARBOL.md)
+> Guía completa: [`README.md`](README.md) · Herramientas: [`ARBOL.md`](ARBOL.md) · Ambientes: [`ENVIRONMENTS.md`](../ci/ENVIRONMENTS.md)
 
 ## Secciones
 
@@ -15,7 +15,7 @@ Las 58 preguntas del avance (P1–P58) + 62 adicionales (P59–P120) + **bloque 
 - [G. Observabilidad](#g-observabilidad) — P48–P51, P110–P113
 - [H. Demostraciones prácticas](#h-demostraciones-prácticas) — P52–P58
 - [I. Preguntas difíciles](#i-preguntas-difíciles) — P114–P120
-- [J. Preguntas del profesor (sesión)](#j-preguntas-del-profesor-sesión) — P121–P143
+- [J. Preguntas del profesor (sesión)](#j-preguntas-del-profesor-sesión) — P121–P144
 
 ---
 
@@ -290,7 +290,7 @@ El del frontend ([`frontend/Dockerfile`](../../../frontend/Dockerfile)) también
 
 ### P10. Explicar el Docker Compose
 
-[`docker-compose.yml`](../../../docker-compose.yml), 10 servicios:
+[`docker-compose.yml`](../../../docker-compose.yml), 11 servicios:
 
 | Servicio | Imagen | Puerto host | Rol |
 |---|---|---|---|
@@ -393,21 +393,36 @@ Cada línea de log lleva el id de traza: eso es lo que permite saltar de un log 
 
 ### P12. ¿Tenemos definidos los tres ambientes?
 
-Sí, y con puertos disjuntos para que puedan coexistir.
+Sí. Conceptos a no mezclar:
 
-| | Desarrollo | Staging | Producción |
+| Concepto | Qué es |
+| -------- | ------ |
+| **Ambiente** | Dónde corre la app: Development / Staging / Production |
+| **Docker Compose** | Receta de contenedores en laptop o runner CI (no es Render) |
+| **Perfil Spring** | Config interna (`docker`, `staging`, `prod`) |
+| **Pipeline** | Automatización (DevSecOps, deploy-staging, etc.) |
+
+Hay **dos capas de ejecución** para Staging/Prod:
+
+| | Development | Staging | Production |
 |---|---|---|---|
-| Compose | `docker-compose.yml` | `docker-compose.staging.yml` | `docker-compose.prod.yml` |
-| Perfil Spring | `docker` | `staging` | `prod` |
-| Frontend / API / Keycloak | 3000 / 8080 / 8081 | 3008 / 8088 / 8181 | 3009 / 8089 / 8182 |
+| **Compose (local/CI)** | `docker-compose.yml` | `docker-compose.staging.yml` (efímero) | `docker-compose.prod.yml` (opcional local) |
+| **Cloud persistente** | — (solo laptop) | Render + Vercel (`develop`) | Render + Vercel (`main`) |
+| Perfil Spring | `docker` / `local` | `staging` | `prod` |
+| FE / API / KC (Compose) | 3000 / 8080 / 8081 | 3008 / 8088 / 8181 | 3009 / 8089 / 8182 |
 | Swagger | sí | sí | no |
-| Logs | INFO | INFO | WARN |
-| Muestreo de trazas | 100 % | 100 % | 10 % |
-| Postgres publicado | red | red | solo `127.0.0.1` |
+| Grafana / Tempo / Loki | **Sí (Compose local)** | No en cloud | No en cloud |
 
-**Y no son decorativos:** el pipeline despliega staging de verdad y corre smoke y E2E contra él.
+**Para qué sirve cada capa:**
 
-**Mostrar:** [`ENVIRONMENTS.md`](../ci/ENVIRONMENTS.md) y el job `staging-deploy-e2e` de [`devsecops.yml`](../../../.github/workflows/devsecops.yml)
+1. **Compose local** — desarrollar y demostrar OBS.
+2. **Compose staging en CI** — smoke + Playwright **post-deploy** (job `staging-deploy-e2e`).
+3. **Cloud** — staging/prod **vivos** en internet (`deploy-staging.yml` / `deploy-prod.yml`).
+
+**Límite free Render:** una Postgres activa → no dejar staging y prod cloud corriendo a la vez.
+
+Tabla “qué es local vs cloud”: [P144](#p144-explicar-los-ambientes-qué-está-en-local-y-qué-está-en-cloud).  
+**Mostrar:** [`ENVIRONMENTS.md`](../ci/ENVIRONMENTS.md), [`CLOUD.md`](../ci/CLOUD.md).
 
 ---
 
@@ -1645,17 +1660,17 @@ Sesiones manuales con objetivo definido (charters), documentadas con evidencia:
 
 ### P43. Mostrar los workflows de GitHub Actions
 
-Cinco archivos en [`.github/workflows/`](../../../.github/workflows/):
+Workflows en [`.github/workflows/`](../../../.github/workflows/):
 
 | Workflow | Disparador | Estado |
 |---|---|---|
-| `devsecops.yml` | push y PR a `develop`, manual | **Principal** |
+| `devsecops.yml` | push y PR a `develop`, manual | **Principal** (build → tests → Sonar → Docker → SCA/DAST → staging Compose E2E → gate) |
+| `deploy-staging.yml` | push a `develop`, manual | **Cloud staging** (hooks Render + Vercel + smoke) |
+| `deploy-prod.yml` | push a `main`, manual | **Cloud prod** |
 | `conventional-commits.yml` | PR a `develop` y `main` | Activo |
-| `ci.yml` | manual | Respaldo |
-| `security.yml` | manual | Respaldo |
-| `post-deploy-staging.yml` | manual | Respaldo |
+| `ci.yml` / `security.yml` / `post-deploy-staging.yml` | manual | Respaldo (contenido consolidado en DevSecOps) |
 
-Los tres últimos quedaron como `workflow_dispatch` porque su contenido se consolidó en el pipeline principal. Se conservan por si se necesita ejecutar una parte aislada sin correr todo.
+**Mostrar:** pestaña Actions → *DevSecOps Pipeline* y *Deploy staging/production (cloud)*. Guías: [`PIPELINE.md`](../ci/PIPELINE.md), [`CLOUD.md`](../ci/CLOUD.md).
 
 ---
 
@@ -2278,82 +2293,86 @@ Elige una y prepárala. Tres candidatas fuertes:
 
 # J. Preguntas del profesor (sesión)
 
-Bloque literal de lo que el profesor abarcó en la sesión previa a la defensa. Respuestas alineadas al código actual; si algo **no está hecho**, se dice con claridad.
+Bloque de la sesión previa a la defensa. Respuestas al **estado actual** (Compose + cloud Render/Vercel). Ambientes local vs cloud: [P12](#p12-tenemos-definidos-los-tres-ambientes) y [P144](#p144-explicar-los-ambientes-qué-está-en-local-y-qué-está-en-cloud).
 
 ---
 
 ### P121. Mostrar el pipeline
 
-El pipeline principal es [`.github/workflows/devsecops.yml`](../../../.github/workflows/devsecops.yml) (**DevSecOps Pipeline**). Se dispara en push/PR a `develop` y también a mano (`workflow_dispatch`).
+Hay **dos pipelines** que mostrar:
 
-Seis jobs:
+**1) DevSecOps (calidad)** — [`.github/workflows/devsecops.yml`](../../../.github/workflows/devsecops.yml)
+Push/PR a `develop` (y `workflow_dispatch`):
 
 ```
 build-and-test ──► docker-images
                ├──► dependency-check
                ├──► zap-baseline
-               └──► staging-deploy-e2e
+               └──► staging-deploy-e2e   ← Compose efímero + smoke + Playwright
                          │
                          ▼
-                   quality-gate  (falla si alguno ≠ success)
+                   quality-gate
 ```
 
-| Job | Qué muestra al profesor |
+| Job | Qué muestra |
 |---|---|
-| `build-and-test` | `./gradlew build`, unit, integration, api, contract, JaCoCo, Sonar |
-| `docker-images` | Build de imágenes API + frontend |
-| `dependency-check` | SCA (OWASP Dependency-Check) |
-| `zap-baseline` | Stack Compose + smoke seguridad + ZAP |
-| `staging-deploy-e2e` | **Despliegue de staging** + smoke + Playwright |
-| `quality-gate` | Gate final que ata todo |
+| `build-and-test` | Gradle: unit, integration, api, contract, JaCoCo, Sonar |
+| `docker-images` | Build imágenes API + frontend |
+| `dependency-check` | SCA |
+| `zap-baseline` | Smoke seguridad + ZAP |
+| `staging-deploy-e2e` | Staging Compose en el runner + E2E |
+| `quality-gate` | Falla si algún stage ≠ `success` |
 
-**Mostrar en vivo:** pestaña Actions de GitHub → último run de *DevSecOps Pipeline* → expandir cada job. Equivalente local: [`infra/jenkins/Jenkinsfile`](../../../infra/jenkins/Jenkinsfile).
+**2) Deploy cloud** — [`deploy-staging.yml`](../../../.github/workflows/deploy-staging.yml) (push `develop`) y [`deploy-prod.yml`](../../../.github/workflows/deploy-prod.yml) (push `main`): hooks Render + deploy Vercel + smoke opcional.
 
-Detalle: [P43–P46](#f-cicd) · [`PIPELINE.md`](../ci/PIPELINE.md)
+**Mostrar en vivo:** GitHub → Actions → *DevSecOps Pipeline* y *Deploy staging/production*. Equivalente Jenkins: [`Jenkinsfile`](../../../infra/jenkins/Jenkinsfile).
+Detalle: [P43–P46](#f-cicd) · [`PIPELINE.md`](../ci/PIPELINE.md) · [`CLOUD.md`](../ci/CLOUD.md)
 
 ---
 
 ### P122. ¿Cómo se despliega?
 
-**Con Docker Compose**, no con un PaaS (todavía).
+**Dos formas** (ambas en el repo):
 
-| Ambiente | Cómo |
+| Ambiente | Cómo se despliega |
 |---|---|
-| **Local / desarrollo** | `docker compose --env-file .env up -d --build` ([`docker-compose.yml`](../../../docker-compose.yml)) |
-| **Staging** | `docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build` |
-| **Producción (plantilla)** | `docker-compose.prod.yml` + `.env.production` (puertos solo en `127.0.0.1`, Swagger off) |
-| **CI** | El job `staging-deploy-e2e` levanta staging en el runner, prueba y hace `down -v` |
+| **Local** | `docker compose --env-file .env up -d --build` |
+| **Staging CI (efímero)** | Job `staging-deploy-e2e` → Compose staging en el runner → smoke → Playwright → `down -v` |
+| **Staging cloud (persistente)** | Branch `develop` → Render (`render.yaml`: API + Keycloak + Postgres) + Vercel (`proyecto-qastaging`, Root `frontend`) |
+| **Prod cloud** | Branch `main` → Render (`infra/render/render.prod.yaml`) + proyecto Vercel con Production Branch `main` |
+| **Prod-like local** | `docker-compose.prod.yml` (plantilla, Swagger off) |
 
-Flujo de un deploy:
+Flujo cloud típico:
 
-1. Se construyen las imágenes (`Dockerfile` multi-stage API; frontend Vite → nginx).
-2. Compose arranca Postgres, Keycloak (importa realm), API, frontend y (en local) observabilidad.
-3. Flyway aplica migraciones al arrancar la API.
-4. Healthchecks / `wait-for-stack.sh` esperan a que Keycloak y la API respondan.
-5. Smoke (`post-deploy-smoke.sh`) y, en CI, E2E Playwright.
+1. Push a `develop` / `main` (o Manual Deploy en Render / Redeploy en Vercel).
+2. Render construye Docker (API / Keycloak); Vercel hace `vite build` con `VITE_*`.
+3. Flyway corre al arrancar la API; Keycloak importa/usa el realm.
+4. Env críticos: `KEYCLOAK_ISSUER_URI`, JWKS, `CORS_ORIGINS`, `VITE_API_URL`, `VITE_KEYCLOAK_URL`.
+5. Smoke: `./scripts/post-deploy-smoke.sh` o health + login en el front.
 
-**Además hay plantillas cloud** (Render + Vercel): [`CLOUD.md`](../ci/CLOUD.md), `render.yaml`, `deploy-staging.yml` / `deploy-prod.yml`. Compose local/CI sigue siendo el camino del PDF; el PaaS es el pedido verbal. Ver [P135](#p135-vercel-y-render--hay-que-desplegar-en-una-plataforma).
+**Free tier:** una sola Postgres → staging y prod cloud no a la vez (suspender un stack, encender el otro). OBS (Grafana/Tempo/Loki) **solo en Compose local**.
+
+Guía: [`CLOUD.md`](../ci/CLOUD.md). Ver [P130](#p130-hay-que-hacer-despliegue-en-una-plataforma-vercel--render--cloud) / [P135](#p135-vercel-y-render--hay-que-desplegar-en-una-plataforma).
 
 ---
 
 ### P123. ¿En qué punto se despliegan los environments?
 
-| Momento | Ambiente | Quién |
+| Momento | Ambiente | Quién / dónde |
 |---|---|---|
-| Desarrollo diario | `local` / perfil Spring `docker` o `local` | Developer en su máquina |
-| Cada push/PR a `develop` | **Staging efímero (CI)** | Job `staging-deploy-e2e` (Compose en el runner) |
-| Push a `develop` (cloud) | **Staging persistente** | `deploy-staging.yml` → Render + Vercel |
-| Push a `main` (cloud) | **Production** | `deploy-prod.yml` → Render + Vercel |
-| Compose prod local | Plantilla | `docker-compose.prod.yml` (demo local) |
+| Diario | Local (`docker` / `local`) | Máquina del developer + Compose |
+| Push/PR a `develop` | Staging **efímero** | Job `staging-deploy-e2e` (Compose en Actions) |
+| Push a `develop` | Staging **cloud** | `deploy-staging.yml` + auto-deploy Render/Vercel |
+| Push / merge a `main` | Production **cloud** | `deploy-prod.yml` + Blueprint prod + Vercel `main` |
 
-El punto exacto en el pipeline:
+Punto exacto en DevSecOps (staging de prueba, no el cloud):
 
 ```
 build-and-test (OK)
        │
        ▼
-staging-deploy-e2e   ← AQUÍ se despliega el environment de staging
-  1. cp .env.staging.example .env.staging
+staging-deploy-e2e   ← AQUÍ el environment staging de CI
+  1. .env.staging desde example
   2. docker compose -f docker-compose.staging.yml up -d --build
   3. wait-for-stack.sh
   4. post-deploy-smoke.sh
@@ -2361,432 +2380,446 @@ staging-deploy-e2e   ← AQUÍ se despliega el environment de staging
   6. down -v
 ```
 
-Los tres environments están definidos (puertos, `.env.*`, perfiles Spring). Staging se **ejerce de verdad** en CI; prod es plantilla lista, no un deploy cloud automático.
+Punto del environment **persistente**: al hacer merge a `develop` (staging) o `main` (prod), Render y Vercel despliegan solos (o el workflow de deploy dispara hooks).
 
-**Mostrar:** [`docker-compose.staging.yml`](../../../docker-compose.staging.yml) + job `staging-deploy-e2e` en `devsecops.yml`.
+**Mostrar:** `devsecops.yml` (job staging) + dashboard Render/Vercel + [`ENVIRONMENTS.md`](../ci/ENVIRONMENTS.md).
 
 ---
 
 ### P124. ¿Cómo implementamos la paginación y qué usamos?
 
-**Offset / page** con el mecanismo estándar de **Spring Data** (`Pageable` + `Page`).
+**Offset / page** con **Spring Data** (`Pageable` + `Page`) y un DTO propio.
 
-1. El controlador recibe `?page=0&size=20&sort=...` vía `@PageableDefault(size = 20) Pageable pageable`.
-2. El servicio llama al repositorio (`@Query` nativa en productos; `JpaSpecificationExecutor` + `Specification` en movimientos de stock).
-3. Se envuelve en **`PageResponse<T>`** (record propio) para no acoplar el JSON al formato interno de Spring.
+| Pieza | Archivo | Qué hace |
+|---|---|---|
+| Query params | [`ProductController.java`](../../../src/main/java/icc354/pucmm/proyectoqa/controller/ProductController.java) | `@PageableDefault(size = 20) Pageable pageable` → `?page=&size=&sort=` |
+| Igual en stock | [`StockController.java`](../../../src/main/java/icc354/pucmm/proyectoqa/controller/StockController.java) / [`ProductStockController.java`](../../../src/main/java/icc354/pucmm/proyectoqa/controller/ProductStockController.java) | Listados paginados |
+| Envoltura JSON | [`PageResponse.java`](../../../src/main/java/icc354/pucmm/proyectoqa/dto/PageResponse.java) | `content`, `page`, `size`, `totalElements`, `totalPages` (no acoplamos al `Page` de Spring) |
+| UI | [`Products.tsx`](../../../frontend/src/pages/Products.tsx) | `size = 10`, muestra “N productos · página X de Y” |
+| SQL | Hibernate | `LIMIT` / `OFFSET` |
 
 ```java
 // ProductController
 public PageResponse<ProductResponse> list(..., @PageableDefault(size = 20) Pageable pageable)
-
-// PageResponse.from(page) → content, page, size, totalElements, totalPages, ...
 ```
 
-Frontend: `Products.tsx` pide `size=10` y muestra totales.
+**No usamos cursor/keyset.** Offset permite numeración de páginas; a esta escala basta.
 
-**No usamos cursor/keyset.** Offset basta a esta escala y permite “página 3 de 12”.
-
-**Mostrar:** [`ProductController.java`](../../../src/main/java/icc354/pucmm/proyectoqa/controller/ProductController.java), [`PageResponse.java`](../../../src/main/java/icc354/pucmm/proyectoqa/dto/PageResponse.java), [P17–P18](#p17-se-utiliza-paginación).
+Ver también [P17–P18](#p17-se-utiliza-paginación).
 
 ---
 
 ### P125. ¿En qué proceso se verifica que el token está vivo?
 
-Hay **dos capas**, cliente y servidor:
+**Dos capas** (cliente y servidor):
 
-**1. Frontend (antes de cada llamada y al expirar)**
+**1. Frontend — antes de cada API call y al expirar**
+
+Archivos: [`frontend/src/api/client.ts`](../../../frontend/src/api/client.ts) y [`frontend/src/auth/AuthContext.tsx`](../../../frontend/src/auth/AuthContext.tsx).
 
 ```ts
-// api/client.ts — si el JWT vence en < 30 s, lo renueva
+// client.ts — si el access token vence en < 30 s, lo renueva con el refresh
 await keycloak.updateToken(30);
 
-// AuthContext — cuando Keycloak avisa que expiró
+// AuthContext — Keycloak avisa onTokenExpired
 keycloak.onTokenExpired = () => {
   keycloak.updateToken(30).catch(() => keycloak.logout());
 };
 ```
 
-Si el **refresh token** también murió, se cierra sesión. Al arrancar usa `onLoad: "check-sso"` (cookie de sesión de Keycloak, no re-login obligatorio).
+Al arrancar: `onLoad: "check-sso"` (sesión SSO sin forzar login).
 
-**2. API (en cada petición HTTP)**
+**2. API — en cada petición HTTP**
 
-El filtro `BearerTokenAuthenticationFilter` (OAuth2 Resource Server):
+Implementación: OAuth2 Resource Server en [`DockerSecurityConfig.java`](../../../src/main/java/icc354/pucmm/proyectoqa/config/DockerSecurityConfig.java).
 
 1. Lee `Authorization: Bearer …`
 2. Valida **firma** con JWKS de Keycloak
-3. Valida **exp** (si expiró → **401**)
+3. Valida **exp** → si expiró → **401**
 4. Valida **issuer** (`iss`)
-5. `extractAuthorities` convierte roles del JWT en authorities
+5. `extractAuthorities` mapea roles del JWT
 
-La API **no** pregunta a Keycloak “¿sigue vivo?” (no hay introspección). Confía en la firma + `exp` del JWT. Eso es lo correcto para JWT.
-
-**Mostrar:** [`frontend/src/api/client.ts`](../../../frontend/src/api/client.ts), [`AuthContext.tsx`](../../../frontend/src/auth/AuthContext.tsx), [`DockerSecurityConfig.java`](../../../src/main/java/icc354/pucmm/proyectoqa/config/DockerSecurityConfig.java).
+La API **no** hace introspección a Keycloak en cada request. Confía en firma + `exp`. Eso es lo correcto con JWT.
 
 ---
 
 ### P126. ¿En qué punto se maneja la restricción de roles? ¿Es el mismo endpoint para API y frontend?
 
-**Misma API REST** para el navegador, curl, k6 y Swagger. No hay un endpoint distinto “para el frontend”.
+**Sí: la misma API REST** (`/api/v1/...`) la usan el SPA, curl, k6 y Swagger. No hay endpoints “solo frontend”.
 
-La restricción real está **solo en el backend**, en cada método:
+| Capa | Dónde | Qué hace |
+|---|---|---|
+| **Autoridad real** | Backend `@PreAuthorize` en controladores | 200 o **403** |
+| **UX** | Frontend `hasResourceRole` / `PERMISSIONS` | Oculta botones; **no** es seguridad |
 
-```java
-@PreAuthorize("hasAuthority('product:view')")   // GET
-@PreAuthorize("hasAuthority('product:manage')") // POST/PUT/DELETE
-@PreAuthorize("hasAuthority('stock:manage')")   // POST movimientos
-```
-
-El frontend **no es seguridad**: oculta botones con `hasResourceRole` / `PERMISSIONS` para UX. Cualquiera puede llamar la API con curl; sin el permiso en el JWT recibe **403**.
+Implementación backend: p. ej. [`ProductController.java`](../../../src/main/java/icc354/pucmm/proyectoqa/controller/ProductController.java), [`StockController.java`](../../../src/main/java/icc354/pucmm/proyectoqa/controller/StockController.java)
+Frontend: [`permissions.ts`](../../../frontend/src/auth/permissions.ts), [`ProtectedRoute.tsx`](../../../frontend/src/components/ProtectedRoute.tsx), [`AuthContext.tsx`](../../../frontend/src/auth/AuthContext.tsx)
 
 ```
-UI (opcional)     →  hasResourceRole('product:manage')  → muestra/oculta botón
-API (obligatorio) →  @PreAuthorize(...)                 → 200 o 403
+UI (opcional)     →  hasResourceRole('product:manage')  → muestra/oculta
+API (obligatorio) →  @PreAuthorize("hasAuthority('…')") → 200 o 403
 ```
 
-**Demostración:** login como `viewer` → no ve “Crear”; `POST /api/v1/products` con su token → 403. Ver [`permissions.spec.ts`](../../../frontend/e2e/permissions.spec.ts).
+**Demo:** `viewer` no ve “Crear”; `POST /api/v1/products` con su token → 403. E2E: [`permissions.spec.ts`](../../../frontend/e2e/permissions.spec.ts).
 
 ---
 
 ### P127. ¿Dónde está la gestión de tokens y clientes?
 
-**En Keycloak**, no en la aplicación.
+**En Keycloak**, no en Postgres ni en Java de negocio.
 
-| Qué | Dónde |
+| Qué | Archivo / lugar |
 |---|---|
-| Realm, usuarios, roles de cliente | [`keycloak/inventory-realm.json`](../../../keycloak/inventory-realm.json) (import al arrancar) |
-| Cliente confidencial `inventory-api` | secret, password grant, **dueño de los 7 permisos** |
-| Cliente público `inventory-frontend` | PKCE, redirect URIs del SPA |
-| Emisión / refresh / logout | Keycloak (`/protocol/openid-connect/token`, …) |
-| Validación del access token | API: Resource Server + JWKS |
-| Obtención en el navegador | [`frontend/src/auth/keycloak.ts`](../../../frontend/src/auth/keycloak.ts) + `AuthContext` |
-| Obtención en scripts/tests | password grant contra `inventory-api` (`helpers.js`, smoke, IT) |
+| Realm, users, roles, clients | [`keycloak/inventory-realm.json`](../../../keycloak/inventory-realm.json) |
+| Cliente confidencial `inventory-api` | Mismo JSON — secret, password grant, **dueño de los 7 permisos** |
+| Cliente público `inventory-frontend` | Mismo JSON — PKCE, redirect URIs |
+| Emisión / refresh | Keycloak `/protocol/openid-connect/token` |
+| Adaptador SPA | [`frontend/src/auth/keycloak.ts`](../../../frontend/src/auth/keycloak.ts) + [`AuthContext.tsx`](../../../frontend/src/auth/AuthContext.tsx) |
+| Validación access token | [`DockerSecurityConfig.java`](../../../src/main/java/icc354/pucmm/proyectoqa/config/DockerSecurityConfig.java) + JWKS |
+| Scripts / k6 / IT | Password grant contra `inventory-api` |
 
-Consola admin Keycloak: http://localhost:8081 (`admin`/`admin`) → realm **inventory** → Clients / Users / Roles.
-
-La app **no guarda** usuarios ni emite tokens.
+Consola: Keycloak admin → realm **inventory** → Clients / Users / Roles. La app **no emite** tokens.
 
 ---
 
 ### P128. ¿Cómo se le da el privilegio de acuerdo al stock?
 
-Con **dos client roles** del cliente `inventory-api`, asignados al usuario en Keycloak:
+Con **client roles** del cliente `inventory-api` en Keycloak (asignados al usuario), no con ifs por username en Java:
 
-| Permiso | Quién lo tiene (demo) | Qué protege |
+| Permiso | Demo | Protege |
 |---|---|---|
-| `stock:view` | `viewer`, `stock-manager`, `admin` | `GET` movimientos / historial |
-| `stock:manage` | `stock-manager`, `admin` | `POST` crear movimiento (IN/OUT/ADJUSTMENT) |
+| `stock:view` | viewer, stock-manager, admin | GET movimientos / historial |
+| `stock:manage` | stock-manager, admin | POST IN / OUT / ADJUSTMENT |
 
-```java
-// StockController
-@PreAuthorize("hasAuthority('stock:view')")    // listar
-@PreAuthorize("hasAuthority('stock:manage')")  // crear movimiento
-```
+**Implementación:** [`StockController.java`](../../../src/main/java/icc354/pucmm/proyectoqa/controller/StockController.java) (`@PreAuthorize`).
+Roles definidos en [`inventory-realm.json`](../../../keycloak/inventory-realm.json).
 
-`stock-manager` puede mover inventario **sin** `product:manage` ni `report:view`: eso es la granularidad fina.
-
-La **regla de negocio** (stock insuficiente → 400) vive en `StockService.calculateQuantityAfter`, no en Keycloak. Keycloak solo dice *quién puede intentar*; el servicio dice *si la cantidad es válida*.
-
-**Mostrar:** realm (usuario `stock-manager`) + [`StockController.java`](../../../src/main/java/icc354/pucmm/proyectoqa/controller/StockController.java).
+La **regla de negocio** (stock insuficiente → 400) está en [`StockService.java`](../../../src/main/java/icc354/pucmm/proyectoqa/application/service/StockService.java), no en Keycloak. Keycloak dice *quién puede intentar*; el servicio dice *si la cantidad es válida*.
 
 ---
 
 ### P129. Tener la prueba de estrés local
 
-Sí. Script k6 + evidencia versionada.
+Sí — k6 local contra API + Keycloak:
 
 ```bash
 docker compose up -d --build postgres keycloak tempo loki alloy api
 ./scripts/k6-run.sh stress          # o: ./scripts/k6-run.sh all
 ```
 
-- Script: [`tests/k6/stress-products.js`](../../../tests/k6/stress-products.js)
-- Evidencia: [`docs/final/testing/k6/stress-products-summary.txt`](../testing/k6/stress-products-summary.txt)
-- Pico: **80 VUs**; umbral **p95 &lt; 2000 ms**, error rate **&lt; 5 %**
-- Última corrida documentada: p95 ≈ **22.5 ms**, **0 %** errores, ~17 800 requests
+| Pieza | Archivo |
+|---|---|
+| Script stress | [`tests/k6/stress-products.js`](../../../tests/k6/stress-products.js) |
+| Runner | [`scripts/k6-run.sh`](../../../scripts/k6-run.sh) |
+| Evidencia | [`docs/final/testing/k6/stress-products-summary.txt`](../testing/k6/stress-products-summary.txt) |
 
-También hay **load** (15 VUs, p95 &lt; 500 ms). Guía: [`docs/final/testing/k6/README.md`](../testing/k6/README.md).
+Umbrales stress: **80 VUs**, **p95 &lt; 2000 ms**, errores **&lt; 5 %**. Última evidencia: p95 ≈ **22.5 ms**, p90 ≈ **15.1 ms**, **0 %** fallos, ~17 800 requests.
+También load: [`load-products.js`](../../../tests/k6/load-products.js) (15 VUs, p95 &lt; 500 ms). Guía: [`k6/README.md`](../testing/k6/README.md).
 
 ---
 
 ### P130. “Hay que hacer despliegue en una plataforma” (Vercel / Render / cloud)
 
-**Estado actual:** el despliegue demostrado es **Docker Compose** (local + staging en GitHub Actions). **No** hay proyecto desplegado en Vercel ni Render.
+**Hecho.** Staging (y prod según Blueprint) en plataforma:
 
-| Opción | Encaja con |
+| Pieza | Dónde |
 |---|---|
-| **Compose en CI** (lo que tenemos) | Cumple “ambiente desplegado + smoke/E2E post-deploy” del curso |
-| **Render** (API + Postgres + Keycloak) + **Vercel** (frontend) | Pedido verbal del profesor; pendiente si lo exige en la defensa |
+| Frontend staging | **Vercel** — `proyecto-qastaging`, branch `develop`, Root `frontend` |
+| API + Keycloak + DB | **Render** — Blueprint [`render.yaml`](../../../render.yaml) |
+| Prod | Blueprint [`infra/render/render.prod.yaml`](../../../infra/render/render.prod.yaml) + Vercel branch `main` |
+| Docs | [`CLOUD.md`](../ci/CLOUD.md) |
+| CI deploy | `deploy-staging.yml` / `deploy-prod.yml` |
 
-Si preguntan por cloud: Blueprint Render + Vercel ya están en el repo ([CLOUD.md](../ci/CLOUD.md)); falta conectar cuentas y secrets. Compose CI sigue siendo el smoke automático. Ver [P135](#p135-vercel-y-render--hay-que-desplegar-en-una-plataforma).
+**Demo en defensa:** abrir el front Vercel → login Keycloak (Render) → productos desde la API (Render).
+**OBS:** Grafana/Tempo/Loki se demuestran en **Compose local** (un solo Grafana; no tres stacks OBS en free tier).
+
+Matiz free: una Postgres → no staging+prod cloud simultáneos (suspender uno). Ver [P135](#p135-vercel-y-render--hay-que-desplegar-en-una-plataforma).
 
 ---
 
 ### P131. Si quiero crear un token para preparar la API (acceso de una empresa hipotética), ¿cómo se gestiona?
 
-**No se “crea un token a mano” en el código.** Se gestiona en Keycloak según el tipo de consumidor:
+**No se inventa un token en el código.** Se gestiona en Keycloak:
 
-**A) Integración máquina-a-máquina (empresa / backend de tercero) — lo correcto**
+**A) Empresa / M2M (correcto)**
 
-1. En Keycloak → Clients → crear cliente confidencial, p. ej. `empresa-xyz`.
-2. Activar **Service accounts** (client credentials).
-3. Asignar al service account solo los client roles necesarios (`product:view`, etc.).
-4. La empresa obtiene el token:
+1. Keycloak → Clients → cliente confidencial `empresa-xyz`, **Service accounts** ON.
+2. Asignar al service account solo roles necesarios (`product:view`, …).
+3. Token:
 
 ```bash
-curl -s -X POST "http://localhost:8081/realms/inventory/protocol/openid-connect/token" \
+curl -s -X POST "$KEYCLOAK_URL/realms/inventory/protocol/openid-connect/token" \
   -d "grant_type=client_credentials" \
   -d "client_id=empresa-xyz" \
   -d "client_secret=<secreto>"
 ```
 
-5. Llama la API con `Authorization: Bearer <access_token>`. La API no cambia: sigue validando JWT + `@PreAuthorize`.
+4. `Authorization: Bearer <access_token>` contra la API. La API no cambia (`@PreAuthorize`).
 
-**B) Usuario humano de esa empresa**
+**B) Usuario humano de esa empresa** — user en el realm + roles; login Authorization Code (SPA).
 
-Crear usuario en el realm, asignar roles de `inventory-api`, login con Authorization Code (SPA) o password grant solo en automatización.
+**C) Demos actuales (k6/smoke/IT)** — password grant de `inventory-api` con users demo. **No** es el modelo para una empresa real.
 
-**C) Lo que usamos hoy en demos/scripts** (no para una empresa real)
-
-Password grant del cliente `inventory-api` con usuarios demo (`admin`/`viewer`). Útil para k6 y smoke; **desaconsejado** como modelo de integración externa.
-
-**Mostrar:** Clients en la consola Keycloak + claim `resource_access` en jwt.io.
+**Mostrar:** Clients en consola Keycloak + jwt.io (`resource_access`).
 
 ---
 
 ### P132. Prueba de performance: ¿cuántas pruebas, cobertura p95 / p90?
 
-**Dos escenarios k6** (no “cobertura de código”; son umbrales de latencia):
+**2 scripts k6** (umbrales de latencia, no % de código):
 
-| # | Tipo | Script | Pico VUs | Gate p95 | Gate p90 | Error rate |
+| # | Tipo | Script | Pico VUs | Gate **p95** | Gate p90 | Error rate |
 |---|---|---|---|---|---|---|
-| 1 | **Load** | `load-products.js` | 15 | **&lt; 500 ms** | *no hay gate* | &lt; 1 % |
-| 2 | **Stress** | `stress-products.js` | 80 | **&lt; 2000 ms** | *no hay gate* | &lt; 5 % |
+| 1 | Load | `load-products.js` | 15 | **&lt; 500 ms** | no hay gate | &lt; 1 % |
+| 2 | Stress | `stress-products.js` | 80 | **&lt; 2000 ms** | no hay gate | &lt; 5 % |
 
-Solo se **exige p95** en los thresholds. El **p90 se mide** en el summary de k6 (informativo), pero no falla el test si p90 sube.
+Solo **p95** (y error rate) hacen fallar el test. El **p90 se reporta** en el summary pero no es umbral.
 
-Resultados documentados:
+Evidencia documentada:
 
 | | Load | Stress |
 |---|---|---|
-| p95 duration | ~15.3 ms | ~22.5 ms |
-| p90 duration | ~13.0 ms | ~15.1 ms |
+| p95 | ~15.3 ms | ~22.5 ms |
+| p90 | ~13.0 ms | ~15.1 ms |
 | http_req_failed | 0 % | 0 % |
 | requests | ~1 025 | ~17 819 |
 
-Endpoint bajo prueba: `GET /api/v1/products` con JWT.
-
-**Punto a punto (E2E)** no es k6: son **12 tests Playwright** (`frontend/e2e/`). k6 = performance; Playwright = punta a punta UI+API.
+Target: `GET /api/v1/products` + JWT.
+**Punto a punto ≠ k6:** son **~12 tests Playwright** en `frontend/e2e/`.
 
 ---
 
 ### P133. ¿Se renderizó una herramienta para el % de coverage? ¿Qué clase está floja? ¿Cuántas pruebas hizo k6?
 
-**Herramientas de cobertura (sí, dos):**
+**Sí — dos herramientas de cobertura de código:**
 
-1. **JaCoCo** — reporte HTML: `./gradlew jacocoTestReport` → `build/reports/jacoco/test/html/index.html`
-2. **SonarCloud** — dashboard del proyecto (`jeanc24_ProyectoQA`): bugs, smells, duplicación y **% cobertura**
+1. **JaCoCo** — `./gradlew jacocoTestReport` → `build/reports/jacoco/test/html/index.html` (config en [`build.gradle`](../../../build.gradle))
+2. **SonarCloud** — dashboard `jeanc24_ProyectoQA` (cobertura + quality gate); config en `build.gradle` + [`sonar-project.properties`](../../../sonar-project.properties)
 
-El pipeline sube el artefacto `jacoco-report` y corre `sonar` cuando hay `SONAR_TOKEN`.
+**Historia “clase floja” / cobertura rara:** Sonar llegó a ~34 % porque el layout de paquetes no coincidía con carpetas (`application.service` vs `service/`) y JaCoCo no sumaba bien IT. Tras alinear paquetes + tests de `KeycloakAdminClient`: cobertura global alta (~80 %+); umbral gate **60 %** en servicios (excepto `AuditService`, que necesita Envers real → IT).
 
-**Qué estaba “flojo” (historia útil):**
-
-- Sonar mostraba **~34 %** porque las carpetas `service/` / `dto/` no coincidían con los paquetes `application.service` / `application.dto` → Sonar no mapeaba la cobertura de los servicios (lo más grande del código).
-- Además JaCoCo **ignoraba** `integrationTest.exec`.
-- Tras el fix: local ~**86 %** líneas; Sonar esperado ~**82 %**. Umbral de gate: **60 %** en clases de `application.service` (excepto `AuditService`, cubierto por IT).
-
-**Clases deliberadamente fuera del umbral unitario:** `AuditService` (necesita Envers/sesión real). DTOs y configs no entran en el mínimo de JaCoCo verification porque no aportan confianza.
-
-**k6:** **2 pruebas** (load + stress). Ver [P132](#p132-prueba-de-performance-cuántas-pruebas-cobertura-p95--p90).
-
-Detalle del bug de cobertura: [P97b](#p97b-por-qué-la-cobertura-en-sonar-estaba-en-34--y-qué-hicieron).
+**k6:** **2 pruebas** (load + stress). Ver [P132](#p132-prueba-de-performance-cuántas-pruebas-cobertura-p95--p90) y [P97b](#p97b-por-qué-la-cobertura-en-sonar-estaba-en-34--y-qué-hicieron).
 
 ---
 
 ### P134. Logs del proyecto: ¿para qué Grafana, Loki, Tempo? ¿Dónde están las traces de Tempo?
 
-| Pieza | Para qué |
-|---|---|
-| **Prometheus** | Métricas numéricas (req/s, latencia, 401/403/5xx, JVM, HikariCP) |
-| **Loki** | Logs centralizados del contenedor `inventory-api` (vía Alloy + Docker socket) |
-| **Tempo** | Trazas distribuidas (spans HTTP + JDBC) exportadas por OpenTelemetry |
-| **Grafana** | UI que junta las tres señales; dashboards versionados en `infra/grafana/dashboards/` |
-| **Alloy** | Agente: recibe OTLP de la API, reparte a Tempo/Loki y scrape/forward |
+| Pieza | Para qué | Dónde está |
+|---|---|---|
+| **Prometheus** | Métricas (latencia, 5xx, 401, JVM…) | [`infra/prometheus/`](../../../infra/prometheus/) |
+| **Loki** | Logs centralizados de la API | [`infra/loki/loki.yml`](../../../infra/loki/loki.yml) |
+| **Tempo** | Trazas (HTTP + JDBC) vía OTel | [`infra/tempo/tempo.yml`](../../../infra/tempo/tempo.yml) |
+| **Alloy** | Recibe OTLP, reparte a Tempo/Loki | [`infra/alloy/config.alloy`](../../../infra/alloy/config.alloy) |
+| **Grafana** | UI: gráficos + logs + traces | [`infra/grafana/`](../../../infra/grafana/), http://localhost:3001 |
 
 **Dónde ver traces de Tempo:**
 
-1. Grafana http://localhost:3001 → dashboard **Observabilidad — Métricas, Logs y Trazas** → panel inferior **“Trazas recientes — service.name = inventory-api”** (datasource Tempo).
-2. O **Explore** → datasource Tempo → buscar `service.name = inventory-api`.
-3. Desde un log en Loki: clic en el **TraceID** (derived field) → salta a Tempo.
+1. Grafana → dashboard **Observabilidad — Métricas, Logs y Trazas** → panel de trazas (`service.name = inventory-api`).
+2. Explore → datasource **Tempo**.
+3. Desde un log en Loki → clic en **TraceID** (derived field en [`datasources.yml`](../../../infra/grafana/provisioning/datasources/datasources.yml)).
 
-Flujo técnico: API → OTLP → Alloy → Tempo. Cada log lleva `[traceId,spanId]` (`logging.pattern.correlation`).
-
-**Mostrar:** [`observability.json`](../../../infra/grafana/dashboards/observability.json), [`datasources.yml`](../../../infra/grafana/provisioning/datasources/datasources.yml).
+Flujo: API (OTel en [`application.yml`](../../../src/main/resources/application.yml)) → Alloy → Tempo. Solo en **Compose local** (no en Render free).
 
 ---
 
 ### P135. Vercel y Render — ¿hay que desplegar en una plataforma?
 
-Pedido verbal del profesor. **Sí, y el repo ya trae el andamiaje:**
+**Sí, y ya está desplegado el patrón pedido:**
 
-| Pieza | Dónde |
-|---|---|
-| Blueprint staging | [`render.yaml`](../../../render.yaml) (branch `develop`) |
-| Blueprint prod | [`infra/render/render.prod.yaml`](../../../infra/render/render.prod.yaml) (branch `main`) |
-| FE | Vercel (`frontend/`, [`vercel.json`](../../../frontend/vercel.json)) |
-| Pipelines | `deploy-staging.yml` / `deploy-prod.yml` |
-| Guía | [`CLOUD.md`](../ci/CLOUD.md) |
+| | Staging | Prod |
+|---|---|---|
+| Front | Vercel (`develop`) | Vercel (`main`) |
+| API / KC / DB | Render `render.yaml` | Render `render.prod.yaml` |
+| Workflow | `deploy-staging.yml` | `deploy-prod.yml` |
 
-**Grafana:** uno solo en Compose local. No hay tres Grafanas (dev/staging/prod): el profesor lo indicó y en free tier es inviable.
+Frase de defensa:
 
-Respuesta en defensa:
+1. Staging cloud ← `develop`; prod ← `main`.
+2. SPA en **Vercel**; API + Keycloak + Postgres en **Render**.
+3. DevSecOps sigue probando staging **Compose** en CI; cloud es el ambiente **persistente**.
+4. Un Grafana local para OBS; no tres Grafanas en free tier.
+5. Free Render: una DB → un stack cloud activo a la vez.
 
-1. Staging cloud ← `develop`; prod cloud ← `main`.
-2. API + Postgres + Keycloak en **Render**; SPA en **Vercel**.
-3. El DevSecOps sigue probando staging Compose efímero en CI; el cloud es el ambiente persistente.
-4. Observabilidad se demuestra en local (un Grafana).
-
-Tras crear las cuentas hay que pegar URLs en Secrets/Variables y completar env `sync: false` en Render (issuer Keycloak = URL pública).
+Ver [`CLOUD.md`](../ci/CLOUD.md) y [P130](#p130-hay-que-hacer-despliegue-en-una-plataforma-vercel--render--cloud).
 
 ---
 
 ### P136. Logs de errores en los dashboards
 
-Sí, en el dashboard unificado:
+Sí, en Grafana local (dashboard unificado [`observability.json`](../../../infra/grafana/dashboards/observability.json)):
 
-| Panel | Fuente | Query |
+| Panel | Fuente | Idea de query |
 |---|---|---|
-| **Logs ERROR** | Loki | `{job="inventory-api"} \|~ "(?i)ERROR"` |
-| **Errores 5xx / 401** | Prometheus | métricas HTTP filtradas por status |
-| **Security** (otro dashboard) | Prometheus | series 401 / 403 |
+| Logs ERROR | Loki | `{job="inventory-api"} \|~ "(?i)ERROR"` |
+| 5xx / latencia | Prometheus | métricas HTTP Actuator |
+| 401 / 403 | Prometheus | dashboard **Security** |
 
-También Explore → Loki → mismo filtro, o `{job="inventory-api", level="ERROR"}` si Alloy etiquetó el nivel.
-
-**Nota honesta:** 401/403 de Spring Security a menudo **no** generan línea `ERROR` en log; sí suben en paneles de **métricas**. Para llenar “Logs ERROR” hace falta una excepción de negocio/runtime. Para la demo visual: generar 401/403 (Security) + tráfico 200 (trazas) + 404 autenticado (pasa por la app).
+**Nota:** muchos 401/403 de Spring Security **no** escriben línea `ERROR`; sí suben métricas. Para demo: tráfico con JWT + forzar 401/403 + 404 autenticado.
 
 ---
 
 ### P137. Debemos tener Tempo, Loki y Prometheus: gráficos y traces
 
-**Sí, provisionado.** Tres datasources + dashboard que los muestra juntos:
+**Sí, en Compose local**, provisionado:
 
 ```
-Grafana dashboards/
-  observability.json  ← Prometheus (gráficos) + Loki (logs) + Tempo (traces)
-  app / infra / security / business / api-ops  ← principalmente Prometheus
+infra/grafana/dashboards/observability.json  ← Prometheus + Loki + Tempo juntos
+infra/prometheus/  infra/loki/  infra/tempo/  infra/alloy/
 ```
 
-Servicios en Compose: `prometheus`, `loki`, `tempo`, `alloy`, `grafana` (puerto host **3001**).
+Servicios en [`docker-compose.yml`](../../../docker-compose.yml): `prometheus`, `loki`, `tempo`, `alloy`, `grafana` (:3001).
 
-Para la defensa: abrir **Observabilidad — Métricas, Logs y Trazas**, generar tráfico con JWT, refrescar 10 s. Ver [P134](#p134-logs-del-proyecto-para-qué-grafana-loki-tempo-dónde-están-las-traces-de-tempo).
+Defensa: abrir ese dashboard, generar tráfico autenticado, ver métricas + logs + traces. Cloud no duplica el stack OBS (decisión de curso / free tier).
 
 ---
 
 ### P138. Pruebas de stress y punto a punto (k6)
 
-Aclarar el vocabulario del profesor:
+| Lo que pide el profesor | Qué es | Herramienta | Archivos |
+|---|---|---|---|
+| **Stress** | Pico de carga | **k6** | `tests/k6/stress-products.js` |
+| **Load / performance** | Tráfico esperado | **k6** | `tests/k6/load-products.js` |
+| **Punto a punto (E2E)** | Flujo UI completo | **Playwright** (~12 tests) | `frontend/e2e/**` |
 
-| Lo que pide | Qué tenemos | Herramienta |
-|---|---|---|
-| **Stress** | `stress-products.js` (80 VUs) | **k6** |
-| **Load / performance** | `load-products.js` (15 VUs) | **k6** |
-| **Punto a punto (E2E)** | 9 specs Playwright (login, permisos, productos, dashboard…) | **Playwright**, no k6 |
-
-k6 golpea un endpoint con muchos VUs; no navega el UI. Playwright sí recorre el flujo completo navegador → Keycloak → API.
-
-Ejecutar stress: [P129](#p129-tener-la-prueba-de-estrés-local). E2E: `cd frontend && npx playwright test`.
+k6 **no** navega el UI; Playwright sí (Keycloak → productos → permisos).
+Correr stress: [P129](#p129-tener-la-prueba-de-estrés-local). E2E: `cd frontend && npm run test:e2e`.
 
 ---
 
 ### P139. Cobertura de stress / performance y mostrar la cobertura
 
-Son **dos “coberturas” distintas**; no mezclarlas:
+**Dos “coberturas” distintas:**
 
-1. **Cobertura de código (unit/IT):** JaCoCo HTML + SonarCloud (% líneas/ramas). Gate 60 % en servicios. Mostrar `build/reports/jacoco/...` o el proyecto en SonarCloud.
-2. **“Cobertura” de performance:** no es % de código. Son **umbrales** p95/error rate cumplidos en load y stress, con evidence en `docs/final/testing/k6/*-summary.txt`.
+1. **Código:** JaCoCo HTML + SonarCloud (% líneas). Gate servicios 60 %. Mostrar reporte o dashboard Sonar.
+2. **Performance:** umbrales p95 / error rate en load y stress — evidencias [`docs/final/testing/k6/*-summary.txt`](../testing/k6/).
 
-En la defensa: abrir el TXT de stress (p95, p90, checks 100 %) **y** el HTML/Sonar de JaCoCo. Frase clara: *“k6 no mide cobertura de código; mide si bajo 80 usuarios el p95 sigue bajo el umbral.”*
+Frase: *“k6 no mide cobertura de código; mide si bajo 80 VUs el p95 sigue bajo 2 s.”* En defensa abrir el TXT de stress **y** JaCoCo/Sonar.
 
 ---
 
 ### P140. ¿Cómo sabe la API qué rol tiene cada uno y cómo se manejan los roles?
 
-1. El usuario inicia sesión en Keycloak → el **access token JWT** trae:
+1. Login en Keycloak → JWT con:
 
 ```json
 "resource_access": {
-  "inventory-api": {
-    "roles": ["product:view", "stock:view", "stock:manage"]
-  }
+  "inventory-api": { "roles": ["product:view", "stock:manage", ...] }
 }
 ```
 
-2. En cada request, `DockerSecurityConfig.extractAuthorities` lee `realm_access` + `resource_access[inventory-api]` y crea `SimpleGrantedAuthority` por cada rol.
-3. `@PreAuthorize("hasAuthority('stock:manage')")` consulta esas authorities en el `SecurityContext`.
-4. Si falta el permiso → **403**; si el token es inválido/expirado → **401**.
-
-Los roles **no están hardcodeados por usuario** en Java. Viven en Keycloak (realm JSON / consola). El código solo declara *qué permiso exige cada endpoint*. El frontend usa los **mismos nombres** (`permissions.ts`) solo para ocultar UI.
+2. [`DockerSecurityConfig.extractAuthorities`](../../../src/main/java/icc354/pucmm/proyectoqa/config/DockerSecurityConfig.java) lee `realm_access` + `resource_access["inventory-api"]` → `SimpleGrantedAuthority`.
+3. `@PreAuthorize("hasAuthority('stock:manage')")` en el controlador decide 200/403.
+4. Roles se **asignan en Keycloak** ([`inventory-realm.json`](../../../keycloak/inventory-realm.json)); Java solo declara qué permiso exige cada endpoint. Frontend replica nombres en [`permissions.ts`](../../../frontend/src/auth/permissions.ts) para UI.
 
 ```
-Keycloak (asignación) → JWT (transporte) → extractAuthorities (mapeo) → @PreAuthorize (decisión)
+Keycloak (asignación) → JWT → extractAuthorities → @PreAuthorize
 ```
 
-**Mostrar en vivo:** jwt.io con un token de `stock-manager` + el método anotado en `StockController`.
+**Mostrar:** jwt.io (token `stock-manager`) + método anotado en `StockController`.
 
 ---
 
 ### P141. ¿Para usar el token es con user/pass authentication?
 
-**Depende del cliente; la API siempre recibe Bearer JWT**, nunca user/pass en el header de negocio.
+**La API siempre recibe Bearer JWT**, nunca user/pass en el header de negocio.
 
 | Quién | Cómo obtiene el token | ¿User/pass? |
 |---|---|---|
-| **Frontend (humano)** | Authorization Code + **PKCE** | Sí, pero **en la página de Keycloak**, no en la API |
-| **k6 / smoke / IT** | Resource Owner **Password** grant (`inventory-api` + secret) | Sí, solo automatización |
-| **Empresa / M2M (ideal)** | **Client credentials** | No: client_id + client_secret |
+| Frontend | Authorization Code + **PKCE** | Sí, pero **en la página de Keycloak** |
+| k6 / smoke / IT | Password grant (`inventory-api`) | Sí, solo automatización |
+| Empresa M2M | **Client credentials** | No (client_id + secret) |
 
-La API **no** implementa form login. Solo:
-
-```
-Authorization: Bearer <access_token>
-```
-
-Swagger: botón Authorize → pegar el access_token (scheme `bearerAuth` en [`OpenApiConfig.java`](../../../src/main/java/icc354/pucmm/proyectoqa/config/OpenApiConfig.java)).
+Swagger: Authorize → pegar access_token (`bearerAuth` en [`OpenApiConfig.java`](../../../src/main/java/icc354/pucmm/proyectoqa/config/OpenApiConfig.java)).
 
 ---
 
 ### P142. ¿Cómo se mapea Swagger?
 
-**springdoc-openapi** escanea los controladores en runtime (perfiles `!prod`).
+**springdoc-openapi** genera el mapa desde el código (perfiles `!prod`):
 
-| Pieza | Rol |
+| Pieza | Archivo / ruta |
 |---|---|
-| Anotaciones `@Tag`, `@Operation`, `@ApiResponse`, `@ParameterObject` | Documentan cada endpoint |
-| [`OpenApiConfig.java`](../../../src/main/java/icc354/pucmm/proyectoqa/config/OpenApiConfig.java) | Título, versión, security scheme Bearer JWT |
-| UI | http://localhost:8080/swagger-ui.html (dev/staging) |
-| Spec JSON | `/v3/api-docs` |
-| Prod | `springdoc` deshabilitado → no hay UI ni rutas públicas de docs |
+| Security scheme Bearer | [`OpenApiConfig.java`](../../../src/main/java/icc354/pucmm/proyectoqa/config/OpenApiConfig.java) |
+| Operaciones | Anotaciones `@Operation` / `@Tag` en controladores |
+| UI | http://localhost:8080/swagger-ui.html |
+| Spec | `/v3/api-docs` |
+| Prod | `springdoc` off en [`application-prod.yml`](../../../src/main/resources/application-prod.yml) |
 
-No hay un `swagger.yaml` a mano: el mapa se **genera** del código. Si añades un `@GetMapping` con `@Operation`, aparece solo.
+No hay `swagger.yaml` a mano: al añadir un `@GetMapping` documentado, aparece solo.
 
 ---
 
 ### P143. ¿Cómo se manejan los permisos para hacer el despliegue?
 
-Dos lecturas posibles; ambas válidas:
+Dos lecturas:
 
-**A) Permisos de la app (roles) — no controlan el deploy**  
-Keycloak decide quién usa la API; **no** quién despliega. Un `viewer` no puede “desplegar menos”: el deploy es infra.
+**A) Roles de la app (Keycloak)** — controlan **uso** de la API, **no** quién despliega.
 
-**B) Permisos del pipeline / secretos (lo que sí controla el deploy)**
+**B) Permisos de infra / CI (quién despliega)**
 
-| Secreto / permiso | Dónde | Para qué |
-|---|---|---|
-| `SONAR_TOKEN` | GitHub Secrets | Análisis Sonar |
-| `GITHUB_TOKEN` | automático | checkout, artifacts |
-| `NVD_API_KEY` (opcional) | Secret | Dependency-Check más rápido |
-| Write en el repo / Environments | GitHub | Quién puede mergear a `develop`/`main` |
-| Archivos `.env` / `.env.staging` | No se commitean secretos reales | Compose local/CI |
+| Qué | Dónde |
+|---|---|
+| Merge a `develop` / `main` | Permisos GitHub del repo |
+| `SONAR_TOKEN`, `NVD_API_KEY` | GitHub Secrets |
+| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID*` | Secrets (deploy FE) |
+| Hooks Render / env API (`KEYCLOAK_*`, `CORS_ORIGINS`) | Dashboard Render + Variables GitHub (`STAGING_*` / `PROD_*`) |
+| Redirect URIs / clients | Consola Keycloak del ambiente |
 
-En CI, staging se despliega con credenciales de **ejemplo** (`.env.staging.example` copiado). En un deploy real a plataforma, las variables irían en el vault del PaaS y el job necesitaría un token de deploy (Render API key, Vercel token) guardado como secret — **aún no configurado** porque el PaaS no está cableado.
+En cloud, desplegar = acceso al repo + secrets Vercel/Render + env de la API alineados al issuer público. Keycloak no autoriza el pipeline.
 
-**Mostrar:** Settings → Secrets del repo + el job que hace `docker compose ... up` sin pedir roles de Keycloak.
+**Mostrar:** Settings → Secrets/Variables + Actions *Deploy staging* + servicios Live en Render.
+
+---
+
+### P144. Explicar los ambientes: ¿qué está en local y qué está en cloud?
+
+Pregunta típica: *“¿Dónde corre cada cosa?”*
+
+#### Mapa rápido
+
+| Pieza | Local (Compose) | Cloud |
+| ----- | --------------- | ----- |
+| Frontend | nginx en Compose `:3000` (o Vite `:5173`) | **Vercel** |
+| API Spring | contenedor `api` `:8080` | **Render** (web service Docker) |
+| Keycloak | contenedor `:8081` | **Render** (web service Docker) |
+| PostgreSQL | contenedor `:5433` | **Render** Postgres |
+| Prometheus / Grafana / Loki / Tempo / Alloy / Alertmanager | **Solo Compose local** | **No** (free tier / decisión del curso) |
+| Jenkins | Compose `:8082` (opcional) | No |
+| Staging efímero para E2E | CI: `docker-compose.staging.yml` | No es el staging de Render |
+| Staging persistente | — | `develop` → `render.yaml` + Vercel staging |
+| Producción | Compose prod-like opcional | `main` → `render.prod.yaml` + Vercel prod |
+
+#### Local — qué usamos y para qué
+
+| Compose / tool | Rol |
+| -------------- | --- |
+| `docker-compose.yml` | Dev completo + **observabilidad** + Jenkins; ZAP en GHA |
+| `docker-compose.staging.yml` | Staging **efímero** en DevSecOps/Jenkins: up → smoke → Playwright → down |
+| `docker-compose.security.yml` | Stack mínimo para Security en Jenkins |
+| `docker-compose.prod.yml` | Simular perfil `prod` en laptop (opcional; **no** es el deploy real) |
+
+Aquí demuestras Grafana (métricas/logs/trazas), Prometheus targets, k6, Playwright local, etc.
+
+#### Cloud — qué usamos y para qué
+
+| Archivo / workflow | Rol |
+| ------------------ | --- |
+| `render.yaml` | Blueprint Render **staging** (API + KC + DB), branch `develop` |
+| `infra/render/render.prod.yaml` | Blueprint Render **prod**, branch `main` |
+| `deploy-staging.yml` | GHA: hooks Render + deploy **Vercel** staging + smoke cloud |
+| `deploy-prod.yml` | Igual para producción |
+
+```text
+LOCAL / CI Compose          CLOUD (persistente)
+─────────────────          ────────────────────
+Dev (OBS, demo)            —
+Staging efímero (E2E)  ≠   Staging Render+Vercel (develop)
+Prod-like opcional     ≠   Prod Render+Vercel (main)
+```
+
+#### Frase de 20 segundos
+
+> “Development y toda la observabilidad corren en Docker Compose en la laptop. Staging tiene dos caras: uno efímero en CI con Compose para smoke y E2E post-deploy, y uno persistente en Render (API/Keycloak/DB) + Vercel (front) desde `develop`. Producción es lo mismo desde `main`. Grafana no está en Render por el límite de 512 MB del free tier.”
+
+**Mostrar:** [`ENVIRONMENTS.md`](../ci/ENVIRONMENTS.md) §1–3 · [`ARBOL.md`](ARBOL.md) §7 · Actions *Deploy staging* + Grafana local `:3001`.  
+Ver también [P12](#p12-tenemos-definidos-los-tres-ambientes) y [P135](#p135-vercel-y-render--hay-que-desplegar-en-una-plataforma).
