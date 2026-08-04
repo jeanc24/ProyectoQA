@@ -17,7 +17,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Uso de CPU del proceso de la API (0–1 → porcentaje).",
       "fieldConfig": {
         "defaults": {
@@ -51,7 +51,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Memoria heap JVM en uso ahora mismo.",
       "fieldConfig": {
         "defaults": {
@@ -88,7 +88,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Hilos vivos de la JVM.",
       "fieldConfig": {
         "defaults": {
@@ -118,7 +118,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Conexiones activas al pool HikariCP (Postgres).",
       "fieldConfig": {
         "defaults": {
@@ -160,7 +160,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "process_cpu_usage = CPU del proceso Java. system_cpu_usage = CPU del host (si está disponible).",
       "fieldConfig": {
         "defaults": {
@@ -196,7 +196,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Memoria JVM: heap (objetos de la app) y non-heap (metaspace, código).",
       "fieldConfig": {
         "defaults": {
@@ -240,7 +240,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Hilos vivos/pico. El contador de pausas GC sube cuando el recolector corre.",
       "fieldConfig": {
         "defaults": {
@@ -281,7 +281,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Pool HikariCP: active/idle/pending/max. Si active ≈ max, la app puede esperar por conexiones.",
       "fieldConfig": {
         "defaults": {

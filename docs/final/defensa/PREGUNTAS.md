@@ -299,7 +299,7 @@ El del frontend ([`frontend/Dockerfile`](../../../frontend/Dockerfile)) también
 | `api` | build local | 8080 | Backend |
 | `frontend` | build local | 3000 | SPA en nginx |
 | `prometheus` | prom/prometheus:v2.53.0 | 9090 | Métricas |
-| `grafana` | grafana:11.2.0 | 3001 | Dashboards |
+| `grafana` | grafana:12.3.0 | 3001 | Dashboards |
 | `tempo` | tempo:2.6.1 | 3200 | Trazas |
 | `loki` | loki:3.2.1 | 3100 | Logs |
 | `alloy` | alloy:v1.5.1 | 4317/4318/12345 | Collector OTLP |

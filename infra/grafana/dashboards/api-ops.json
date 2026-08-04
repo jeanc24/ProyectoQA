@@ -9,7 +9,7 @@
   "links": [],
   "panels": [
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Requests por segundo (todas las rutas).",
       "fieldConfig": {
         "defaults": {
@@ -47,7 +47,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Latencia media (sum/count). No usa _bucket.",
       "fieldConfig": {
         "defaults": {
@@ -85,7 +85,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Errores 5xx por segundo.",
       "fieldConfig": {
         "defaults": {
@@ -128,7 +128,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "description": "Memoria heap JVM en uso.",
       "fieldConfig": {
         "defaults": {
