@@ -39,7 +39,8 @@ El workflow CI espera el gate con `sonar.qualitygate.wait=true`: si no pasa, el 
 export SONAR_TOKEN=...
 ./gradlew test jacocoTestReport sonar
 
-# CI: automático en push/PR a develop (.github/workflows/ci.yml)
+# CI: automático en push/PR a develop (.github/workflows/devsecops.yml)
+# .github/workflows/ci.yml queda como respaldo manual (workflow_dispatch)
 ```
 
 Dashboard: [https://sonarcloud.io/project/overview?id=jeanc24_ProyectoQA](https://sonarcloud.io/project/overview?id=jeanc24_ProyectoQA)

@@ -5,8 +5,17 @@ Todo lo que hace el proyecto, **dónde está en el código** y **por qué se hiz
 | Documento | Contenido |
 |---|---|
 | **Este archivo** | Explicación completa: arquitectura, flujos, seguridad, datos, frontend, ambientes, testing, CI/CD, observabilidad |
-| [`ARBOL.md`](ARBOL.md) | Árbol de carpetas comentado con la herramienta usada en cada archivo |
-| [`PREGUNTAS.md`](PREGUNTAS.md) | Banco de preguntas con respuesta y archivo donde demostrarla: P1–P120 + bloque del profesor P121–P143 (pipeline, deploy, k6, roles, observabilidad) |
+| [`GUION-24H.md`](GUION-24H.md) | **Repaso defensa:** flujo visual + párrafos orales + archivos clicables (Keycloak → OBS → deploy) |
+| [`ARCHIVOS.md`](ARCHIVOS.md) | **Solo tablas de archivos** clicables por tema (abrir y señalar en la demo) |
+| [`RESUMEN-APARTADOS.md`](RESUMEN-APARTADOS.md) | **1–2 párrafos por apartado** (qué tenemos en seguridad, tests, QA, backend, FE, datos, infra, OBS, CI/CD) |
+| [`GUIA-DEMO.md`](GUIA-DEMO.md) | **Práctica:** tests uno a uno, qué código abrir, Swagger/Postman/curl |
+| [`ARBOL.md`](ARBOL.md) | Catálogo por usabilidad (Seguridad, Test, QA, …): cómo se implementó cada herramienta + archivos |
+| [`PREGUNTAS.md`](PREGUNTAS.md) | Banco de preguntas: P1–P120 + bloque profesor P121–P144 (pipeline, ambientes local/cloud, deploy, k6, roles, observabilidad) |
+| [`ENVIRONMENTS.md`](../ci/ENVIRONMENTS.md) | Qué Compose se usa en local/CI/cloud, perfiles Spring y pipelines activos/legacy |
+| [`../REQUISITOS.md`](../REQUISITOS.md) | **Entrega PDF:** requisitos funcionales y no funcionales |
+| [`../TECNICA.md`](../TECNICA.md) | **Entrega PDF:** arquitectura, instalación, mantenimiento |
+| [`../GUIA-PRUEBAS.md`](../GUIA-PRUEBAS.md) | **Entrega:** chuleta de comandos (tests, JaCoCo, Sonar, Swagger, OBS…) |
+| [`../README.md`](../README.md) | Índice de `docs/final/` |
 
 ---
 
